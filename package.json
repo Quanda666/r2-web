@@ -7,7 +7,7 @@
   "author": "Viki <hi@viki.moe> (https://github.com/vikiboss)",
   "license": "MIT",
   "scripts": {
-    "dev": "bun --port 5500 ./src/index.html",
+    "dev": "npx serve ./src -p 5500",
     "typecheck": "tsc --noEmit --project jsconfig.json",
     "update-src": "node ./scripts/release.mts && git add . && git commit -m \"chore: release $(git describe --tags --abbrev=0)\"",
     "release": "bumpp --no-push && pnpm update-src && git push --follow-tags"
@@ -26,6 +26,7 @@
     "@types/node": "^25.3.5",
     "bumpp": "^10.4.1",
     "changelogithub": "^14.0.0",
+    "serve": "^14.2.6",
     "typescript": "^5.9.3"
   }
 }
