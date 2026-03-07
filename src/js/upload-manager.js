@@ -349,6 +349,9 @@ class UploadManager {
     const useOverrideKey = Boolean(overrideKey && files.length === 1)
 
     const uploads = []
+    /** @type {null | 'overwrite-all' | 'skip-all'} */
+    let conflictDecision = null
+    let skippedCount = 0
     title.textContent = `${t('uploadProgress')} 0/${files.length}`
 
     for (let i = 0; i < files.length; i++) {
@@ -394,6 +397,28 @@ class UploadManager {
         key = currentPrefix + processedName
       }
 
+      // Check for existing file conflict
+      if (conflictDecision !== 'overwrite-all') {
+        let exists = false
+        try {
+          await this.#r2.headObject(key)
+          exists = true
+        } catch {
+          exists = false
+        }
+        if (exists) {
+          if (conflictDecision === 'skip-all') {
+            skippedCount++
+            continue
+          }
+          const choice = await this.#ui.confirmOverwrite(getFileName(key), files.length > 1)
+          if (choice === 'skip') { skippedCount++; continue }
+          if (choice === 'skip-all') { conflictDecision = 'skip-all'; skippedCount++; continue }
+          if (choice === 'overwrite-all') conflictDecision = 'overwrite-all'
+          // 'overwrite': fall through to upload
+        }
+      }
+
       const contentType = file.type || getMimeType(file.name)
 
       const id = `upload-${i}-${Date.now()}`
@@ -422,6 +447,17 @@ class UploadManager {
       uploads.push({ id, key, file, contentType })
     }
 
+    // All files were skipped
+    if (uploads.length === 0) {
+      panel.hidden = true
+      if (skippedCount > 0) {
+        this.#ui.toast(t('uploadSkipped', { count: skippedCount }), 'info')
+      }
+      return
+    }
+
+    title.textContent = `${t('uploadProgress')} 0/${uploads.length}`
+
     let completed = 0
     const results = await Promise.allSettled(
       uploads.map(u =>
@@ -447,6 +483,9 @@ class UploadManager {
       this.#ui.toast(t('uploadSuccess', { count: success }), 'success')
     } else {
       this.#ui.toast(t('uploadPartialFail', { success, fail }), 'error')
+    }
+    if (skippedCount > 0) {
+      this.#ui.toast(t('uploadSkipped', { count: skippedCount }), 'info')
     }
 
     await this.#explorer.refresh()

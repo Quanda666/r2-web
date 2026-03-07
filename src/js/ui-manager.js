@@ -158,12 +158,14 @@ class UIManager {
 
     const previewBtn = $('[data-action="preview"]', menu)
     const downloadBtn = $('[data-action="download"]', menu)
+    const shareQrBtn = $('#ctx-share-qr', menu)
     const copyLinkBtn = $('#ctx-copy-link', menu)
     const copyImageBtn = $('#ctx-copy-image', menu)
     const copyImageSep = $('#ctx-sep-copy-image', menu)
     const fileSep = $('#ctx-sep-file', menu)
     previewBtn.hidden = isFolder
     downloadBtn.hidden = isFolder
+    shareQrBtn.hidden = isFolder
     copyLinkBtn.hidden = isFolder
     const showCopyImage = !isFolder && IMAGE_RE.test(key)
     copyImageBtn.hidden = !showCopyImage
@@ -280,6 +282,54 @@ class UIManager {
 
       form.addEventListener('submit', onSubmit)
       $('#confirm-cancel').addEventListener('click', onCancel)
+      dialog.addEventListener('click', onBackdropClick)
+      dialog.addEventListener('close', onClose, { once: true })
+      dialog.showModal()
+    })
+  }
+
+  /**
+   * Show overwrite confirmation dialog when a file already exists.
+   * @param {string} name - Filename to display
+   * @param {boolean} [showApplyAll] - Whether to show "Apply to all" buttons (batch upload)
+   * @returns {Promise<'overwrite' | 'skip' | 'overwrite-all' | 'skip-all'>}
+   */
+  confirmOverwrite(name, showApplyAll = false) {
+    return new Promise(resolve => {
+      const dialog = /** @type {HTMLDialogElement} */ ($('#overwrite-dialog'))
+      $('#overwrite-title').textContent = t('overwriteTitle')
+      $('#overwrite-message').textContent = t('overwriteMsg', { name })
+      $('#overwrite-skip').textContent = t('overwriteSkip')
+      $('#overwrite-skip-all').textContent = t('overwriteSkipAll')
+      $('#overwrite-ok').textContent = t('overwriteConfirm')
+      $('#overwrite-ok-all').textContent = t('overwriteAll')
+      $('#overwrite-skip-all').hidden = !showApplyAll
+      $('#overwrite-ok-all').hidden = !showApplyAll
+
+      /** @type {'overwrite' | 'skip' | 'overwrite-all' | 'skip-all'} */
+      let result = 'skip'
+
+      const onSkip = () => { result = 'skip'; dialog.close() }
+      const onSkipAll = () => { result = 'skip-all'; dialog.close() }
+      const onOverwrite = () => { result = 'overwrite'; dialog.close() }
+      const onOverwriteAll = () => { result = 'overwrite-all'; dialog.close() }
+
+      /** @param {Event} e */
+      const onBackdropClick = e => { if (e.target === dialog) dialog.close() }
+
+      const onClose = () => {
+        $('#overwrite-skip').removeEventListener('click', onSkip)
+        $('#overwrite-skip-all').removeEventListener('click', onSkipAll)
+        $('#overwrite-ok').removeEventListener('click', onOverwrite)
+        $('#overwrite-ok-all').removeEventListener('click', onOverwriteAll)
+        dialog.removeEventListener('click', onBackdropClick)
+        resolve(result)
+      }
+
+      $('#overwrite-skip').addEventListener('click', onSkip)
+      $('#overwrite-skip-all').addEventListener('click', onSkipAll)
+      $('#overwrite-ok').addEventListener('click', onOverwrite)
+      $('#overwrite-ok-all').addEventListener('click', onOverwriteAll)
       dialog.addEventListener('click', onBackdropClick)
       dialog.addEventListener('close', onClose, { once: true })
       dialog.showModal()

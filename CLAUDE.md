@@ -8,8 +8,6 @@
 
 **核心特性** 文件上传、目录浏览、文件预览、文件操作、图片压缩、PWA、多语言（zh/en/ja）、浅色/深色主题。
 
-**代码规模** script.js 2914 行，components.css 1453 行，tokens.css 85 行。
-
 **快速启动**
 ```bash
 npx serve src
@@ -21,49 +19,57 @@ python3 -m http.server 5500 --directory src
 
 ### 快速定位表
 
-| 任务 | 文件 | 搜索关键词 | 行号 |
-|------|------|-----------|------|
-| 修改文件名模板逻辑 | script.js | `function applyFilenameTemplate` | 631 |
-| 修改图片压缩逻辑 | script.js | `async function compressFile` | 1595 |
-| 添加 i18n 文案 | script.js | `const I18N = {` | 37 |
-| 修改按钮样式 | css/components.css | `.btn {` | - |
-| 添加设计 Token | css/tokens.css | `@layer tokens {` | - |
-| 修改 R2 API 操作 | script.js | `class R2Client {` | 730 |
-| 修改文件浏览逻辑 | script.js | `class FileExplorer {` | 865 |
-| 修改上传管理逻辑 | script.js | `class UploadManager {` | 1780 |
+| 任务 | 文件 |
+|------|------|
+| 修改文件名模板逻辑 | `src/js/utils.js` — `applyFilenameTemplate` |
+| 修改图片压缩逻辑 | `src/js/upload-manager.js` — `compressFile` |
+| 添加 i18n 文案 | `src/js/i18n.js` — `const I18N` |
+| 修改按钮样式 | `src/css/components.css` — `.btn` |
+| 添加设计 Token | `src/css/tokens.css` |
+| 修改 R2 API 操作 | `src/js/r2-client.js` |
+| 修改文件浏览逻辑 | `src/js/file-explorer.js` |
+| 修改上传管理逻辑 | `src/js/upload-manager.js` |
 
-### 全局函数列表
+### 工具函数列表
 
-**重要：以下是全局函数，不是类方法**
+以下函数定义在 `src/js/utils.js`，供各模块导入：
 
-- `t(key, vars)` - i18n 翻译函数
-- `applyFilenameTemplate(file, template)` - 631 行 - 文件名模板处理
-  - 占位符：`[name]`、`[ext]`、`[hash:N]`、`[date:FORMAT]`、`[timestamp]`、`[uuid]`、`/`
-  - 被 `UploadManager` 调用（1862 行）
-- `compressFile(file, options)` - 1595 行 - 图片压缩
-  - 内部通过 `config.compressMode` 判断模式（local/cloud/none）
-  - **PNG 特殊处理**：直接优化缓冲区，不重新编码（与其他格式不同）
-  - **自适应逻辑**：如果压缩后文件更大，使用原文件
-  - 被 `UploadManager.uploadFiles()` 调用（1861 行）
+- `t(key, vars)` — i18n 翻译（来自 `src/js/i18n.js`）
+- `applyFilenameTemplate(tpl, file)` — 文件名模板处理，占位符：`[name]`、`[ext]`、`[hash:N]`、`[date:FORMAT]`、`[timestamp]`、`[uuid]`、`/`
+- `compressFile(file, config, onStatus)` — 图片压缩（定义在 `upload-manager.js`）
+  - PNG 特殊处理：直接优化缓冲区，不重新编码
+  - 自适应逻辑：压缩后更大则使用原文件
 
 ## 项目结构
 
 ```
 r2-web/
-├── plan.md            — 原始需求文档
 ├── readme.md          — 项目说明、使用指南
 ├── package.json       — 依赖声明（仅用于类型提示）
 ├── jsconfig.json      — JSDoc 类型检查配置
 └── src/               — 源码目录（即部署目录）
      ├── index.html    — 应用外壳、import map、对话框模板
-     ├── script.js     — 应用逻辑（类架构，2914 行）
+     ├── main.js       — 入口（仅 new App()）
+     ├── manifest.json — PWA 配置
      ├── style.css     — 样式主入口（仅导入 css 子目录）
+     ├── js/           — 业务逻辑模块
+     │    ├── app.js              — 主协调器
+     │    ├── config-manager.js   — 配置持久化、Base64 分享
+     │    ├── r2-client.js        — S3 API 客户端
+     │    ├── ui-manager.js       — 主题、Toast、对话框、Tooltip
+     │    ├── file-explorer.js    — 目录导航、排序、分页、缩略图
+     │    ├── upload-manager.js   — 上传、文件名模板、图片压缩
+     │    ├── file-preview.js     — 图片/视频/音频/文本预览
+     │    ├── file-operations.js  — 重命名、复制、移动、删除
+     │    ├── i18n.js             — 多语言（zh/zh_TW/en/ja）
+     │    ├── constants.js        — 常量
+     │    └── utils.js            — 工具函数
      └── css/          — 样式模块（CSS Layers）
           ├── reset.css       — CSS Reset
-          ├── tokens.css      — 设计 Token（85 行，定义所有变量）
+          ├── tokens.css      — 设计 Token（定义所有变量）
           ├── base.css        — 全局基础样式
           ├── layout.css      — 布局容器
-          ├── components.css  — 通用 UI 组件（1453 行）
+          ├── components.css  — 通用 UI 组件
           ├── utilities.css   — 工具类
           └── animations.css  — 动画与过渡
 ```
@@ -87,7 +93,7 @@ pnpm add -D package-name@x.y.z
 #   }
 # }
 
-# 3. 在 src/script.js 中导入使用
+# 3. 在对应模块（如 src/js/utils.js）中导入使用
 # import { something } from 'package-name'
 ```
 
@@ -100,20 +106,20 @@ pnpm add -D package-name@x.y.z
 
 ### JavaScript 类架构
 
-所有类定义在 `src/script.js` 中，采用单文件组织：
+每个类独立为一个模块，位于 `src/js/`：
 
-| 类 | 职责 | 搜索关键词 | 起始行 |
-| --- | --- | --- | --- |
-| `ConfigManager` | localStorage 持久化、Base64 配置分享 | `class ConfigManager` | 654 |
-| `R2Client` | S3 API 客户端（基于 `aws4fetch` 签名） | `class R2Client` | 730 |
-| `UIManager` | 主题、Toast、对话框、上下文菜单、Tooltip | `class UIManager` | 865 |
-| `FileExplorer` | 目录导航、排序、分页、懒加载缩略图、列表缓存 | `class FileExplorer` | 1068 |
-| `UploadManager` | 拖拽/粘贴上传、文件名模板、图片压缩 | `class UploadManager` | 1780 |
-| `FilePreview` | 图片/视频/音频/文本预览 | `class FilePreview` | 2084 |
-| `FileOperations` | 重命名、复制、移动、删除（递归删除文件夹） | `class FileOperations` | 2279 |
-| `App` | 主协调器、i18n 处理 | `class App` | 2604 |
+| 类 | 文件 | 职责 |
+| --- | --- | --- |
+| `ConfigManager` | `config-manager.js` | localStorage 持久化、Base64 配置分享 |
+| `R2Client` | `r2-client.js` | S3 API 客户端（基于 `aws4fetch` 签名） |
+| `UIManager` | `ui-manager.js` | 主题、Toast、对话框、上下文菜单、Tooltip |
+| `FileExplorer` | `file-explorer.js` | 目录导航、排序、分页、懒加载缩略图、列表缓存 |
+| `UploadManager` | `upload-manager.js` | 拖拽/粘贴上传、文件名模板、图片压缩 |
+| `FilePreview` | `file-preview.js` | 图片/视频/音频/文本预览 |
+| `FileOperations` | `file-operations.js` | 重命名、复制、移动、删除（递归删除文件夹） |
+| `App` | `app.js` | 主协调器、i18n 处理 |
 
-**应用初始化** 在 `src/script.js` 末尾（2914 行）：
+**应用初始化** 在 `src/main.js`：
 
 ```javascript
 // 启动应用，构造函数内部自动创建所有管理器并初始化
@@ -154,7 +160,7 @@ await #loadPage(isInitial, bypassCache = false)
 
 ### 设计 Token
 
-所有样式值通过 CSS 自定义属性定义（`src/css/tokens.css`，85 行）：
+所有样式值通过 CSS 自定义属性定义（`src/css/tokens.css`）：
 
 **Token 类别**
 - **间距** `--sp-*`（1/2/3/4/5/6/8/10/12）
@@ -249,14 +255,14 @@ async uploadFile(file, customPath) {
 
 ### 多语言机制
 
-- **I18N 对象** `script.js` 第 37 行（150+ 键值）
+- **I18N 对象** `src/js/i18n.js`（zh / zh_TW / en / ja 四语言）
 - **翻译函数** `t(key, vars)` 支持变量替换
-- **支持语言** zh（中文）、en（英语）、ja（日语）
+- **支持语言** zh（中文）、zh_TW（繁体）、en（英语）、ja（日语）
 - **语言切换** `App.updateLanguage()` 自动更新所有文案
 
 ### 添加新文案
 
-1. 在 `I18N` 对象添加 zh/en/ja 键值（script.js:37）
+1. 在 `src/js/i18n.js` 的 `I18N` 对象添加 zh / zh_TW / en / ja 键值
 2. 代码中使用 `t('key')` 或 `t('key', { var: 'value' })`
 3. HTML 元素使用 `data-tooltip-key="key"` 支持动态更新
 
@@ -296,24 +302,24 @@ R2 桶必须配置 CORS 允许应用域名（详见 `readme.md`）。
 
 ### R2Client 类方法
 
-完整方法列表（`src/script.js`，730 行起）：
+完整方法列表见 `src/js/r2-client.js`：
 
-| 方法 | 功能 | 位置 |
-|------|------|------|
-| `listObjects(prefix, continuationToken)` | 列出对象（ListObjectsV2） | 749 |
-| `getPresignedUrl(key, expiresIn)` | 生成预签名 URL | 804 |
-| `getPublicUrl(key)` | 生成公开 URL | 814 |
-| `getObjectMetadata(key)` | 获取对象元数据（HEAD） | 823 |
-| `deleteObject(key)` | 删除对象 | 836 |
-| `copyObject(sourceKey, targetKey)` | 复制对象 | 843 |
-| `createFolder(key)` | 创建文件夹（零字节对象） | 856 |
-| `uploadFile(key, file, onProgress)` | 上传文件（PUT） | 786 |
+| 方法 | 功能 |
+|------|------|
+| `listObjects(prefix, continuationToken)` | 列出对象（ListObjectsV2） |
+| `putObjectSigned(key, contentType)` | 生成上传预签名信息 |
+| `getPresignedUrl(key)` | 生成访问预签名 URL |
+| `getPublicUrl(key)` | 生成公开 URL（需配置自定义域名） |
+| `headObject(key)` | 获取对象元数据（HEAD） |
+| `deleteObject(key)` | 删除对象 |
+| `copyObject(src, dest)` | 复制对象 |
+| `createFolder(prefix)` | 创建文件夹（零字节对象） |
 
 所有请求通过 AWS Signature Version 4 签名（`aws4fetch` 库）。
 
 ### 添加新 API 操作
 
-在 `R2Client` 类中添加方法（`src/script.js:730`）：
+在 `src/js/r2-client.js` 的 `R2Client` 类中添加方法：
 
 ```javascript
 class R2Client {
@@ -351,7 +357,7 @@ class R2Client {
 - **防抖节流** 搜索、滚动事件（使用原生 `debounce`/`throttle`）
 - **Promise.all** 批量操作（删除、复制等）
 - **ViewTransition API** 平滑页面切换（`document.startViewTransition()`）
-- **图片压缩自适应** 压缩后更大则用原文件（`compressFile()` 1595 行）
+- **图片压缩自适应** 压缩后更大则用原文件（`compressFile()` in `upload-manager.js`）
 
 ### 性能监控
 
@@ -391,7 +397,7 @@ class R2Client {
 1. 需求确认
 2. 检查是否有可复用组件（`src/css/components.css`）
 3. 使用设计 Token（`src/css/tokens.css`），避免硬编码
-4. 新增文案添加到 `I18N` 对象（`src/script.js:37`）
+4. 新增文案添加到 `src/js/i18n.js` 的 `I18N` 对象
 5. 添加 JSDoc 注解
 6. 手动测试（需配置 R2 桶 CORS）
 
@@ -428,9 +434,59 @@ class R2Client {
 
 ### 添加新对话框
 
-1. 在 `src/index.html` 中添加 `<dialog>` 元素
-2. 在 `src/script.js` 中添加控制逻辑（`showModal()`、`close()` 等）
-3. 在 `I18N` 对象中添加相关文案
+1. **HTML 结构（`src/index.html`）**：内层面板统一使用 `<div class="dialog-panel">`，CSS 选择器 `dialog > .dialog-panel` 会自动命中所有布局样式（背景、圆角、动画等）。只有包含 `type="submit"` 按钮时才改用 `<form method="dialog">`
+
+   ```html
+   <!-- 标准写法（无表单提交） -->
+   <dialog id="my-dialog">
+     <div class="dialog-panel">
+       <div class="dialog-header"><h2 id="my-title"></h2></div>
+       <div class="dialog-body">...</div>
+       <div class="dialog-footer">...</div>
+     </div>
+   </dialog>
+
+   <!-- 有表单提交时（如 prompt、confirm） -->
+   <dialog id="my-dialog">
+     <form id="my-form" method="dialog">
+       ...
+     </form>
+   </dialog>
+   ```
+
+2. **宽度规则（`src/css/components.css`）**：小型对话框（confirm/prompt 同款）需将选择器加入已有规则
+
+   ```css
+   #prompt-dialog > form,
+   #confirm-dialog > form,
+   #my-dialog > .dialog-panel { /* ← 在此追加 */
+     width: min(420px, calc(100vw - 48px));
+   }
+   ```
+
+3. **专有尺寸或布局**：需要定制尺寸/内容区布局时，用 ID 选择器覆盖，不修改通用规则
+
+   ```css
+   /* 大尺寸对话框（如 preview-dialog） */
+   #my-dialog > .dialog-panel {
+     width: min(1000px, calc(100vw - 48px));
+     height: min(720px, calc(100dvh - 48px));
+   }
+
+   /* 内容区居中（如 file-qr-dialog） */
+   #my-dialog .dialog-body {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     text-align: center;
+   }
+   ```
+
+   **原则**：dialog 内元素的 ID（如 `#my-url`、`#my-btn`）全局唯一，可直接用 ID 选择器定制样式，无需加 dialog 作用域前缀。
+
+4. **JS 控制逻辑（`src/js/ui-manager.js`）**：在 `UIManager` 类中添加方法，遵循现有 `confirm()` 模式（Promise 包裹、事件监听、`{ once: true }` 清理）
+
+5. **文案**：在 `src/js/i18n.js` 的 `I18N` 对象中为 zh / zh_TW / en / ja 四语言同步添加
 
 ## 调试指南
 

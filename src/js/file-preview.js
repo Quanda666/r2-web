@@ -64,7 +64,7 @@ class FilePreview {
         this.#currentImageUrl = url
         this.#currentCopyType = 'image'
         body.innerHTML = `<img src="${url}" alt="${getFileName(key)}">`
-        copyBtn.dataset.tooltip = t('copyUrl')
+        copyBtn.dataset.tooltip = t('copyLink')
         copyBtn.hidden = false
       } else if (VIDEO_RE.test(key)) {
         const url = this.#r2.getPublicUrl(key) ?? (await this.#r2.getPresignedUrl(key))

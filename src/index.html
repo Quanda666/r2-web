@@ -52,7 +52,7 @@
   <body>
     <!-- Config Dialog -->
     <dialog id="config-dialog">
-      <div id="config-form">
+      <div id="config-form" class="dialog-panel">
         <div class="dialog-header">
           <h2 id="config-title">R2 Web</h2>
           <div class="dialog-header-actions">
@@ -998,7 +998,7 @@
         </svg>
         <span>下载</span>
       </button>
-      <button type="button" class="context-menu-item" data-action="shareQr">
+      <button type="button" class="context-menu-item" id="ctx-share-qr" data-action="shareQr">
         <svg
           class="icon"
           viewBox="0 0 24 24"
@@ -1015,7 +1015,7 @@
           <path d="M17 17h4v4h-4z" />
           <path d="M14 21v-4" />
         </svg>
-        <span>显示分享二维码</span>
+        <span>二维码</span>
       </button>
       <div class="context-menu-item has-submenu" id="ctx-copy-link">
         <svg
@@ -1215,11 +1215,29 @@
       </form>
     </dialog>
 
+    <!-- Overwrite Confirm Dialog -->
+    <dialog id="overwrite-dialog">
+      <div class="dialog-panel">
+        <div class="dialog-header">
+          <h2 id="overwrite-title">文件已存在</h2>
+        </div>
+        <div class="dialog-body">
+          <p id="overwrite-message"></p>
+        </div>
+        <div class="dialog-footer">
+          <button type="button" class="btn secondary" id="overwrite-skip">跳过</button>
+          <button type="button" class="btn secondary" id="overwrite-skip-all">全部跳过</button>
+          <button type="button" class="btn primary" id="overwrite-ok">覆盖</button>
+          <button type="button" class="btn primary" id="overwrite-ok-all">全部覆盖</button>
+        </div>
+      </div>
+    </dialog>
+
     <!-- File QR Dialog -->
     <dialog id="file-qr-dialog">
       <div class="dialog-panel">
         <div class="dialog-header">
-          <h2 id="file-qr-title">文件二维码</h2>
+          <h2 id="file-qr-title">二维码</h2>
           <div class="dialog-header-actions">
             <button type="button" class="icon-btn sm" id="file-qr-close" data-tooltip="关闭">
               <svg
@@ -1246,7 +1264,7 @@
           <div class="field">
             <input id="file-qr-url" type="text" readonly />
           </div>
-          <button type="button" class="btn secondary sm" id="file-qr-copy">
+          <button type="button" class="btn sm secondary" id="file-qr-copy">
             <span id="file-qr-copy-text">复制链接</span>
           </button>
         </div>

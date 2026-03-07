@@ -200,33 +200,10 @@
     text-align: center;
     padding-block: var(--sp-4);
     gap: var(--sp-2);
-  }
 
-  #file-qr-dialog #file-qr-desc {
-    margin: 0;
-  }
-
-  #file-qr-dialog .config-transfer-qr {
-    margin: 0 auto;
-  }
-
-  #file-qr-dialog .field {
-    width: min(520px, 100%);
-  }
-
-  #file-qr-dialog #file-qr-url {
-    text-align: center;
-    font-family: var(--font-mono);
-  }
-
-  #file-qr-dialog #file-qr-copy {
-    align-self: center;
-  }
-
-  #file-qr-dialog #file-qr-filename {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
+    & .field {
+      width: min(520px, 100%);
+    }
   }
 
   .file-qr-filename {
@@ -236,7 +213,12 @@
     margin-top: calc(var(--sp-1) * -1);
   }
 
+  #file-qr-desc {
+    margin: 0;
+  }
+
   #file-qr-url {
+    text-align: center;
     font-family: var(--font-mono);
   }
 
@@ -356,8 +338,7 @@
 
   /* Dialog inner panel — base styles */
   dialog > form,
-  dialog > .dialog-panel,
-  dialog > #config-form {
+  dialog > .dialog-panel {
     background: var(--bg-secondary);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
@@ -430,7 +411,7 @@
 
   /* Dialog body */
   .dialog-body {
-    padding: var(--sp-2) var(--sp-5);
+    padding: var(--sp-5);
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -490,9 +471,10 @@
     }
   }
 
-  /* Small dialogs (prompt, confirm) */
+  /* Small dialogs (prompt, confirm, overwrite) */
   #prompt-dialog > form,
-  #confirm-dialog > form {
+  #confirm-dialog > form,
+  #overwrite-dialog > .dialog-panel {
     width: min(420px, calc(100vw - 48px));
 
     @media (width <= 640px) {
@@ -752,8 +734,7 @@
   }
 
   dialog[open] > form,
-  dialog[open] > .dialog-panel,
-  dialog[open] > #config-form {
+  dialog[open] > .dialog-panel {
     opacity: 1;
     transform: scale(1);
 
