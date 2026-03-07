@@ -10,8 +10,7 @@
     "dev": "npx serve ./src -p 5500",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit --project jsconfig.json",
-    "update-src": "node ./scripts/release.mts && git add . && git commit -m \"chore: release $(git describe --tags --abbrev=0)\"",
-    "release": "bumpp --no-push && pnpm update-src && git push --follow-tags"
+    "release": "bumpp"
   },
   "prettier": {
     "semi": false,
