@@ -61,14 +61,14 @@ Follow the [CORS setup guide](#1-configure-r2-bucket-cors) below, then visit **[
 
 ## Feature Overview
 
-| Category | Details |
-| --- | --- |
-| **File Management** | Directory browsing, paginated loading, lazy thumbnail loading<br>Sort by name / date / size<br>Rename, move, copy, delete (recursive) |
-| **File Upload** | Drag / paste / picker upload<br>Filename templates (hash, date, UUID placeholders)<br>Auto image compression before upload (WebAssembly) |
-| **File Preview** | Image preview (common formats)<br>Inline video / audio player<br>Text file preview with syntax highlighting |
-| **Link Copy** | Direct URL, Markdown, HTML, pre-signed URL |
-| **Personalization** | Chinese / English / Japanese<br>Dark mode (follows system)<br>Config share link / QR code |
-| **PWA** | Install to desktop, native-like experience |
+| Category            | Details                                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **File Management** | Directory browsing, paginated loading, lazy thumbnail loading<br>Sort by name / date / size<br>Rename, move, copy, delete (recursive)    |
+| **File Upload**     | Drag / paste / picker upload<br>Filename templates (hash, date, UUID placeholders)<br>Auto image compression before upload (WebAssembly) |
+| **File Preview**    | Image preview (common formats)<br>Inline video / audio player<br>Text file preview with syntax highlighting                              |
+| **Link Copy**       | Direct URL, Markdown, HTML, pre-signed URL                                                                                               |
+| **Personalization** | Chinese / English / Japanese<br>Dark mode (follows system)<br>Config share link / QR code                                                |
+| **PWA**             | Install to desktop, native-like experience                                                                                               |
 
 ## Quick Start
 

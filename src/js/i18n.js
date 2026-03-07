@@ -877,10 +877,16 @@ const I18N = {
 
 /** @returns {Lang} */
 function getInitialLang() {
+  console.log('Detecting language...')
   const saved = localStorage.getItem(LANG_KEY)
   if (saved) return /** @type {Lang} */ (saved)
 
+  console.log('No saved language, detecting from browser settings...')
+
   const browserLang = navigator.language || ''
+
+  console.log('Browser language:', browserLang)
+
   /** @type {Lang} */
   let detected = 'zh'
   if (/^zh-(TW|HK|MO)/i.test(browserLang)) detected = 'zh_TW'
