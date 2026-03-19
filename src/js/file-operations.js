@@ -13,6 +13,17 @@ class FileOperations {
   /** @type {FileExplorer} */
   #explorer
 
+  /**
+   * 将用户输入的路径规范化为文件夹前缀。
+   * 去除前导斜杠，根目录返回 `''`，否则确保以 `/` 结尾。
+   * @param {string} v
+   * @returns {string}
+   */
+  static #toFolderPrefix(v) {
+    const norm = v.replace(/^\/+/, '')
+    return norm === '' ? '' : norm.endsWith('/') ? norm : norm + '/'
+  }
+
   /** @param {R2Client} r2 @param {UIManager} ui @param {FileExplorer} explorer */
   constructor(r2, ui, explorer) {
     this.#r2 = r2
@@ -117,10 +128,7 @@ class FileOperations {
     const currentPrefix = this.#explorer.currentPrefix
 
     /** @param {string} v */
-    const resolveDest = (v) => {
-      const folder = v === '' ? '' : v.endsWith('/') ? v : v + '/'
-      return folder + name + (isFolder ? '/' : '')
-    }
+    const resolveDest = (v) => FileOperations.#toFolderPrefix(v) + name + (isFolder ? '/' : '')
 
     const destFolder = await this.#ui.prompt(t('moveTitle'), t('moveLabel'), currentPrefix, {
       preview: (v) => '→ ' + resolveDest(v),
@@ -250,7 +258,7 @@ class FileOperations {
 
     const destFolder = await this.#ui.prompt(t('batchMoveTitle'), t('batchMoveLabel'), currentPrefix, {
       validate: (v) => {
-        const folder = v === '' ? '' : v.endsWith('/') ? v : v + '/'
+        const folder = FileOperations.#toFolderPrefix(v)
         const allSame = items.every((item) => {
           const name = extractFileName(item.key)
           return folder + name + (item.isFolder ? '/' : '') === item.key
@@ -260,7 +268,7 @@ class FileOperations {
     })
     if (destFolder === null) return false
 
-    const folder = destFolder === '' ? '' : destFolder.endsWith('/') ? destFolder : destFolder + '/'
+    const folder = FileOperations.#toFolderPrefix(destFolder)
     this.#ui.toast(t('batchMoving', { count }), 'info')
     let success = 0
     let fail = 0
@@ -310,7 +318,7 @@ class FileOperations {
 
     const destFolder = await this.#ui.prompt(t('batchCopyTitle'), t('batchCopyLabel'), currentPrefix, {
       validate: (v) => {
-        const folder = v === '' ? '' : v.endsWith('/') ? v : v + '/'
+        const folder = FileOperations.#toFolderPrefix(v)
         const allSame = items.every((item) => {
           const name = extractFileName(item.key)
           return folder + name + (item.isFolder ? '/' : '') === item.key
@@ -320,7 +328,7 @@ class FileOperations {
     })
     if (destFolder === null) return false
 
-    const folder = destFolder === '' ? '' : destFolder.endsWith('/') ? destFolder : destFolder + '/'
+    const folder = FileOperations.#toFolderPrefix(destFolder)
     this.#ui.toast(t('batchCopying', { count }), 'info')
     let success = 0
     let fail = 0
