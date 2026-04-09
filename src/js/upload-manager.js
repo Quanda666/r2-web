@@ -238,10 +238,11 @@ class UploadManager {
       const items = [...(e.clipboardData?.items || [])]
       const htmlText = e.clipboardData?.getData('text/html') || ''
       const plainText = e.clipboardData?.getData('text/plain') || ''
-      const hasHtml = Boolean(htmlText.trim())
-      const hasText = Boolean(plainText.trim() || hasHtml)
+      // 去除 HTML 标签后的纯文字内容，用于判断是否有实质文字（避免把图片的 HTML 包装误判为文字）
+      const htmlTextContent = htmlText.replace(/<[^>]+>/g, '').trim()
+      const hasText = Boolean(plainText.trim() || htmlTextContent)
       const hasImageItem = items.some((item) => item.kind === 'file' && item.type.startsWith('image/'))
-      const hasHtmlImage = hasHtml && /<img[\s>]/i.test(htmlText)
+      const hasHtmlImage = Boolean(htmlText.trim()) && /<img[\s>]/i.test(htmlText)
 
       /** @type {File[]} */
       const files = items
