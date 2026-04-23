@@ -1,4 +1,4 @@
-import { hashPassword, createToken, response } from '../_utils.js';
+import { hashPassword, createToken, response } from '../../_utils.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;

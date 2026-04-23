@@ -1,4 +1,4 @@
-import { getUser, response } from '../_utils.js';
+import { getUser, response } from '../../_utils.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
