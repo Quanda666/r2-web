@@ -1982,4 +1982,44 @@
     align-items: center;
     gap: var(--sp-2);
   }
+
+  /* Buckets List */
+  .buckets-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+  }
+
+  .bucket-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    transition: all var(--duration-fast);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent);
+    }
+
+    &.active {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent), transparent 90%);
+    }
+
+    .bucket-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .bucket-actions {
+      display: flex;
+      gap: var(--sp-1);
+    }
+  }
 }

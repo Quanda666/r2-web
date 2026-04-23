@@ -562,7 +562,7 @@ class UIManager {
       /** @param {Event} e */
       const onSubmit = (e) => {
         e.preventDefault()
-        const selected = dialog.querySelector('input[name=\"filenamePathChoice\"]:checked')
+        const selected = dialog.querySelector('input[name="filenamePathChoice"]:checked')
         result = /** @type {any} */ (selected)?.value || 'prefix-template'
         dialog.close()
       }
@@ -683,6 +683,180 @@ class UIManager {
 
     document.addEventListener('pointerdown', hide)
     document.addEventListener('scroll', hide, true)
+  }
+
+  /**
+   * @param {'login' | 'register'} type
+   * @returns {Promise<{username: string, password: string} | null>}
+   */
+  showAuthDialog(type) {
+    return new Promise((resolve) => {
+      const dialog = /** @type {HTMLDialogElement} */ ($('#auth-dialog'))
+      const form = $('#auth-form')
+      const title = $('#auth-dialog-title')
+      const submitBtn = $('#auth-submit')
+      const usernameInput = /** @type {HTMLInputElement} */ ($('#auth-username'))
+      const passwordInput = /** @type {HTMLInputElement} */ ($('#auth-password'))
+
+      title.textContent = t(type)
+      submitBtn.textContent = t(type)
+      usernameInput.value = ''
+      passwordInput.value = ''
+
+      let result = null
+
+      /** @param {Event} e */
+      const onSubmit = (e) => {
+        e.preventDefault()
+        result = {
+          username: usernameInput.value.trim(),
+          password: passwordInput.value.trim()
+        }
+        dialog.close()
+      }
+
+      const onCancel = () => dialog.close()
+
+      /** @param {Event} e */
+      const onBackdropClick = (e) => {
+        if (e.target === dialog) dialog.close()
+      }
+
+      const onClose = () => {
+        form.removeEventListener('submit', onSubmit)
+        $('#auth-cancel').removeEventListener('click', onCancel)
+        dialog.removeEventListener('click', onBackdropClick)
+        resolve(result)
+      }
+
+      form.addEventListener('submit', onSubmit)
+      $('#auth-cancel').addEventListener('click', onCancel)
+      dialog.addEventListener('click', onBackdropClick)
+      dialog.addEventListener('close', onClose, { once: true })
+      dialog.showModal()
+    })
+  }
+
+  /**
+   * @param {any} [bucketData]
+   * @returns {Promise<any | null>}
+   */
+  showBucketEditor(bucketData = null) {
+    return new Promise((resolve) => {
+      const dialog = /** @type {HTMLDialogElement} */ ($('#bucket-editor-dialog'))
+      const form = /** @type {HTMLFormElement} */ ($('#bucket-editor-form'))
+      const title = $('#bucket-editor-title')
+      
+      title.textContent = bucketData ? t('editBucket') : t('addBucket')
+      
+      // Reset form
+      form.reset()
+      
+      if (bucketData) {
+        for (const [key, value] of Object.entries(bucketData)) {
+          const input = form.elements.namedItem(key)
+          if (input) {
+            if (input.type === 'checkbox') {
+              input.checked = !!value
+            } else {
+              input.value = value || ''
+            }
+          }
+        }
+        // Special case for bucketName/bucket compatibility
+        if (bucketData.bucketName || bucketData.bucket) {
+          form.elements.namedItem('bucketName').value = bucketData.bucketName || bucketData.bucket
+        }
+      }
+
+      let result = null
+
+      const onSubmit = (e) => {
+        e.preventDefault()
+        const formData = new FormData(form)
+        result = Object.fromEntries(formData.entries())
+        // Convert checkbox
+        result.isDefault = form.elements.namedItem('isDefault').checked
+        dialog.close()
+      }
+
+      const onCancel = () => dialog.close()
+      
+      const onClose = () => {
+        form.removeEventListener('submit', onSubmit)
+        $('#bucket-editor-cancel').removeEventListener('click', onCancel)
+        resolve(result)
+      }
+
+      form.addEventListener('submit', onSubmit)
+      $('#bucket-editor-cancel').addEventListener('click', onCancel)
+      dialog.addEventListener('close', onClose, { once: true })
+      dialog.showModal()
+    })
+  }
+
+  /**
+   * @param {any[]} buckets
+   * @param {number | null} activeId
+   * @param {Function} onSelect
+   * @param {Function} onEdit
+   * @param {Function} onDelete
+   */
+  renderBuckets(buckets, activeId, onSelect, onEdit, onDelete) {
+    const list = $('#buckets-list')
+    list.innerHTML = ''
+    
+    if (buckets.length === 0) {
+      list.innerHTML = `<p class="text-secondary" style="text-align: center; padding: 20px;">${t('emptyFolder')}</p>`
+      return
+    }
+
+    buckets.forEach(bucket => {
+      const el = document.createElement('div')
+      el.className = `bucket-item ${bucket.id === activeId ? 'active' : ''}`
+      el.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-md);
+        border: 1px solid ${bucket.id === activeId ? 'var(--accent)' : 'var(--border)'};
+        cursor: pointer;
+      `
+      
+      const info = document.createElement('div')
+      info.className = 'bucket-info'
+      info.style.flex = '1'
+      info.innerHTML = `
+        <div style="font-weight: 500; font-size: 14px;">${bucket.name} ${bucket.isDefault ? '<small class="badge">Default</small>' : ''}</div>
+        <div style="font-size: 12px; color: var(--text-secondary);">${bucket.bucketName}</div>
+      `
+      info.onclick = () => onSelect(bucket.id)
+      
+      const actions = document.createElement('div')
+      actions.className = 'bucket-actions'
+      actions.style.display = 'flex'
+      actions.style.gap = '4px'
+      
+      const editBtn = document.createElement('button')
+      editBtn.type = 'button'
+      editBtn.className = 'icon-btn sm'
+      editBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+      editBtn.onclick = (e) => { e.stopPropagation(); onEdit(bucket) }
+      
+      const deleteBtn = document.createElement('button')
+      deleteBtn.type = 'button'
+      deleteBtn.className = 'icon-btn sm danger'
+      deleteBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+      deleteBtn.onclick = (e) => { e.stopPropagation(); onDelete(bucket.id) }
+      
+      actions.appendChild(editBtn)
+      actions.appendChild(deleteBtn)
+      el.appendChild(info)
+      el.appendChild(actions)
+      list.appendChild(el)
+    })
   }
 }
 
