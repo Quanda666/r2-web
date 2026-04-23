@@ -15,33 +15,74 @@ class R2Client {
   init(configManager) {
     this.#config = configManager
     const cfg = configManager.get()
-    this.#client = new AwsClient({
-      accessKeyId: cfg.accessKeyId,
-      secretAccessKey: cfg.secretAccessKey,
-      service: 's3',
-      region: 'auto',
-    })
+    
+    // Ensure we have credentials before creating the client
+    if (cfg.accountId && cfg.accessKeyId && cfg.secretAccessKey) {
+      this.#client = new AwsClient({
+        accessKeyId: cfg.accessKeyId,
+        secretAccessKey: cfg.secretAccessKey,
+        service: 's3',
+        region: 'auto',
+      })
+    } else {
+      this.#client = null
+    }
+  }
+
+  #getBucketUrl() {
+    if (!this.#config) throw new Error('Config manager not initialized')
+    const url = this.#config.getBucketUrl()
+    if (!url) throw new Error('R2 Bucket URL is not configured')
+    return url
+  }
+
+  /**
+   * Internal fetch with signing and error handling
+   * @param {string | URL} url 
+   * @param {RequestInit} [init]
+   */
+  async #fetch(url, init) {
+    if (!this.#client) {
+      throw new Error('R2 Client not initialized or missing credentials')
+    }
+    
+    try {
+      const res = await this.#client.fetch(url.toString(), init)
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('HTTP_401')
+        if (res.status === 403) throw new Error('HTTP_403')
+        if (res.status === 404) throw new Error('HTTP_404')
+        throw new Error(`HTTP ${res.status}`)
+      }
+      return res
+    } catch (/** @type {any} */ err) {
+      if (err.message.startsWith('HTTP_') || err.message.startsWith('HTTP ')) throw err
+      console.error('R2 Fetch failed:', err)
+      throw err
+    }
   }
 
   /** @param {string} [prefix] @param {string} [continuationToken] */
   async listObjects(prefix = '', continuationToken = '') {
-    const url = new URL(/** @type {ConfigManager} */ (this.#config).getBucketUrl())
+    const bucketUrl = this.#getBucketUrl()
+    const url = new URL(bucketUrl)
     url.searchParams.set('list-type', '2')
     url.searchParams.set('delimiter', '/')
     url.searchParams.set('max-keys', String(PAGE_SIZE))
     if (prefix) url.searchParams.set('prefix', prefix)
     if (continuationToken) url.searchParams.set('continuation-token', continuationToken)
 
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url.toString())
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
-
+    const res = await this.#fetch(url)
     const text = await res.text()
     const doc = new DOMParser().parseFromString(text, 'application/xml')
+
+    // Check for S3 error in XML
+    const errorEl = doc.querySelector('Error')
+    if (errorEl) {
+      const code = errorEl.querySelector('Code')?.textContent
+      const message = errorEl.querySelector('Message')?.textContent
+      throw new Error(code ? `${code}: ${message}` : message || 'Unknown S3 error')
+    }
 
     /** @type {FileItem[]} */
     const folders = [...doc.querySelectorAll('CommonPrefixes > Prefix')].map((el) => ({
@@ -71,21 +112,29 @@ class R2Client {
    * @returns {Promise<boolean>}
    */
   async fileExists(key) {
-    const url = new URL(/** @type {ConfigManager} */ (this.#config).getBucketUrl())
-    url.searchParams.set('list-type', '2')
-    url.searchParams.set('max-keys', '1')
-    url.searchParams.set('prefix', key)
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url.toString())
-    if (!res.ok) return false
-    const text = await res.text()
-    const doc = new DOMParser().parseFromString(text, 'application/xml')
-    return [...doc.querySelectorAll('Contents > Key')].some((el) => el.textContent === key)
+    try {
+      const bucketUrl = this.#getBucketUrl()
+      const url = new URL(bucketUrl)
+      url.searchParams.set('list-type', '2')
+      url.searchParams.set('max-keys', '1')
+      url.searchParams.set('prefix', key)
+      
+      const res = await this.#fetch(url)
+      const text = await res.text()
+      const doc = new DOMParser().parseFromString(text, 'application/xml')
+      return [...doc.querySelectorAll('Contents > Key')].some((el) => el.textContent === key)
+    } catch {
+      return false
+    }
   }
 
   /** @param {string} key @param {string} contentType */
   async putObjectSigned(key, contentType) {
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const req = await /** @type {AwsClient} */ (this.#client).sign(url, {
+    if (!this.#client) {
+      throw new Error('R2 Client not initialized or missing credentials')
+    }
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    const req = await this.#client.sign(url, {
       method: 'PUT',
       headers: { 'Content-Type': contentType },
     })
@@ -94,21 +143,17 @@ class R2Client {
 
   /** @param {string} key */
   async getObject(key) {
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url)
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
-    return res
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    return this.#fetch(url)
   }
 
   /** @param {string} key */
   async getPresignedUrl(key) {
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const signed = await /** @type {AwsClient} */ (this.#client).sign(url, {
+    if (!this.#client) {
+      throw new Error('R2 Client not initialized or missing credentials')
+    }
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    const signed = await this.#client.sign(url, {
       method: 'GET',
       aws: { signQuery: true },
     })
@@ -117,10 +162,13 @@ class R2Client {
 
   /** @param {string} key @param {string} filename */
   async getDownloadUrl(key, filename) {
-    const base = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
+    if (!this.#client) {
+      throw new Error('R2 Client not initialized or missing credentials')
+    }
+    const base = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
     const url = new URL(base)
     url.searchParams.set('response-content-disposition', `attachment; filename="${encodeURIComponent(filename)}"`)
-    const signed = await /** @type {AwsClient} */ (this.#client).sign(url.toString(), {
+    const signed = await this.#client.sign(url.toString(), {
       method: 'GET',
       aws: { signQuery: true },
     })
@@ -129,7 +177,8 @@ class R2Client {
 
   /** @param {string} key */
   getPublicUrl(key) {
-    const cfg = /** @type {ConfigManager} */ (this.#config).get()
+    if (!this.#config) return null
+    const cfg = this.#config.get()
     if (cfg.customDomain && cfg.bucketAccess !== 'private') {
       return `${cfg.customDomain}/${encodeS3Key(key)}`
     }
@@ -138,9 +187,8 @@ class R2Client {
 
   /** @param {string} key */
   async headObject(key) {
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url, { method: 'HEAD' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    const res = await this.#fetch(url, { method: 'HEAD' })
     return {
       contentType: res.headers.get('content-type'),
       contentLength: parseInt(res.headers.get('content-length') || '0', 10),
@@ -151,69 +199,47 @@ class R2Client {
 
   /** @param {string} key */
   async deleteObject(key) {
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url, { method: 'DELETE' })
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    await this.#fetch(url, { method: 'DELETE' })
   }
 
   /** @param {string} src @param {string} dest */
   async copyObject(src, dest) {
-    const cfg = /** @type {ConfigManager} */ (this.#config).get()
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(dest)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url, {
+    if (!this.#config) throw new Error('Config manager not initialized')
+    const cfg = this.#config.get()
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(dest)}`
+    await this.#fetch(url, {
       method: 'PUT',
       headers: {
-        'x-amz-copy-source': `/${cfg.bucket}/${encodeS3Key(src)}`,
+        'x-amz-copy-source': `/${cfg.bucket || cfg.bucketName}/${encodeS3Key(src)}`,
       },
     })
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
   }
 
   /** @param {string} key @param {string} contentType */
   async updateContentType(key, contentType) {
-    const cfg = /** @type {ConfigManager} */ (this.#config).get()
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url, {
+    if (!this.#config) throw new Error('Config manager not initialized')
+    const cfg = this.#config.get()
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    await this.#fetch(url, {
       method: 'PUT',
       headers: {
-        'x-amz-copy-source': `/${cfg.bucket}/${encodeS3Key(key)}`,
+        'x-amz-copy-source': `/${cfg.bucket || cfg.bucketName}/${encodeS3Key(key)}`,
         'x-amz-metadata-directive': 'REPLACE',
         'Content-Type': contentType,
       },
     })
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
   }
 
   /** @param {string} prefix */
   async createFolder(prefix) {
     const key = prefix.endsWith('/') ? prefix : prefix + '/'
-    const url = `${/** @type {ConfigManager} */ (this.#config).getBucketUrl()}/${encodeS3Key(key)}`
-    const res = await /** @type {AwsClient} */ (this.#client).fetch(url, {
+    const url = `${this.#getBucketUrl()}/${encodeS3Key(key)}`
+    await this.#fetch(url, {
       method: 'PUT',
       headers: { 'Content-Length': '0' },
       body: '',
     })
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('HTTP_401')
-      if (res.status === 403) throw new Error('HTTP_403')
-      if (res.status === 404) throw new Error('HTTP_404')
-      throw new Error(`HTTP ${res.status}`)
-    }
   }
 }
 

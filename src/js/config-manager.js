@@ -130,12 +130,15 @@ class ConfigManager {
 
   getEndpoint() {
     const c = this.load()
+    if (!c.accountId) return ''
     return `https://${c.accountId}.r2.cloudflarestorage.com`
   }
 
   getBucketUrl() {
     const c = this.load()
-    return `${this.getEndpoint()}/${c.bucket || c.bucketName}`
+    const endpoint = this.getEndpoint()
+    if (!endpoint || !(c.bucket || c.bucketName)) return ''
+    return `${endpoint}/${c.bucket || c.bucketName}`
   }
 
   toBase64() {
