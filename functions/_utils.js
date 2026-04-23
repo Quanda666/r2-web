@@ -1,4 +1,4 @@
-const SECRET = 'r2-web-secret-key-change-me'; // In production, use an environment variable
+const DEFAULT_SECRET = 'r2-web-secret-key-change-me';
 
 export async function hashPassword(password) {
   const encoder = new TextEncoder();
@@ -8,7 +8,7 @@ export async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function createToken(user) {
+export async function createToken(user, secret = DEFAULT_SECRET) {
   const header = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = b64(JSON.stringify({
     id: user.id,
@@ -17,24 +17,27 @@ export async function createToken(user) {
   }));
   
   const token = `${header}.${payload}`;
-  const signature = await sign(token, SECRET);
+  const signature = await sign(token, secret);
   return `${token}.${signature}`;
 }
 
-export async function verifyToken(token) {
+export async function verifyToken(token, secret = DEFAULT_SECRET) {
   if (!token) return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   
   const [header, payload, signature] = parts;
-  const validSignature = await sign(`${header}.${payload}`, SECRET);
+  const validSignature = await sign(`${header}.${payload}`, secret);
   
   if (signature !== validSignature) return null;
   
-  const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-  if (decodedPayload.exp < Math.floor(Date.now() / 1000)) return null;
-  
-  return decodedPayload;
+  try {
+    const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    if (decodedPayload.exp < Math.floor(Date.now() / 1000)) return null;
+    return decodedPayload;
+  } catch {
+    return null;
+  }
 }
 
 async function sign(data, secret) {
@@ -59,9 +62,9 @@ export function response(data, status = 200) {
   });
 }
 
-export async function getUser(request) {
+export async function getUser(request, env) {
   const cookie = request.headers.get('Cookie');
   if (!cookie) return null;
   const token = cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-  return verifyToken(token);
+  return verifyToken(token, env.JWT_SECRET || DEFAULT_SECRET);
 }

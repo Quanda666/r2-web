@@ -16,7 +16,7 @@ export async function onRequestPost(context) {
     ).bind(username, hashedPassword).run();
 
     const user = results[0];
-    const token = await createToken(user);
+    const token = await createToken(user, env.JWT_SECRET || 'r2-web-secret-key-change-me');
 
     return new Response(JSON.stringify({ user }), {
       status: 201,

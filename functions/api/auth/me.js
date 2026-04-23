@@ -1,8 +1,8 @@
 import { getUser, response } from '../../_utils.js';
 
 export async function onRequestGet(context) {
-  const { request } = context;
-  const user = await getUser(request);
+  const { request, env } = context;
+  const user = await getUser(request, env);
 
   if (!user) {
     return response({ authenticated: false }, 200);

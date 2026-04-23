@@ -417,15 +417,18 @@
         <h1 class="hero-title" id="hero-title">R2 Manager</h1>
         <p class="hero-desc" id="hero-desc">纯客户端的 Cloudflare R2 存储桶文件管理器。</p>
         <div class="hero-actions">
-          <div id="hero-auth-actions" class="flex" style="gap: 8px; margin-bottom: 8px; width: 100%; justify-content: center;">
-            <button type="button" class="btn secondary" id="hero-login-btn">
+          <div id="hero-auth-actions" class="hero-auth-row">
+            <button type="button" class="btn primary" id="hero-login-btn">
               <span id="hero-login-text">登录</span>
             </button>
-            <button type="button" class="btn secondary" id="hero-register-btn">
+            <button type="button" class="btn primary" id="hero-register-btn">
               <span id="hero-register-text">注册</span>
             </button>
           </div>
-          <button type="button" class="btn primary" id="hero-connect-btn">
+          <div class="hero-divider">
+            <span id="hero-divider-text">或</span>
+          </div>
+          <button type="button" class="btn secondary" id="hero-connect-btn">
             <svg
               class="icon"
               viewBox="0 0 24 24"
@@ -591,13 +594,25 @@
     <div id="app" hidden>
       <!-- Topbar -->
       <header class="topbar">
-        <div class="flex items-center" style="gap: 8px">
-          <img src="favicon.ico" alt="" class="topbar-logo" />
-          <h1 class="topbar-title">R2 Web</h1>
+        <div class="flex items-center" style="gap: 12px">
+          <div class="flex items-center" style="gap: 8px">
+            <img src="favicon.ico" alt="" class="topbar-logo" />
+            <h1 class="topbar-title">R2 Web</h1>
+          </div>
+          
+          <div id="bucket-switcher-container" class="bucket-switcher-container" hidden>
+            <div class="vertical-divider"></div>
+            <select id="bucket-switcher" class="select sm bucket-select">
+              <!-- Buckets will be loaded here -->
+            </select>
+          </div>
         </div>
+
         <div class="flex items-center" style="gap: 4px">
-          <div id="topbar-user" class="flex items-center" style="gap: 8px; margin-right: 8px;" hidden>
-            <span id="topbar-username" class="text-secondary" style="font-size: 14px;"></span>
+          <div id="topbar-user" class="flex items-center" style="gap: 8px; margin-right: 4px;" hidden>
+            <div class="user-profile-menu">
+              <span id="topbar-username" class="topbar-username"></span>
+            </div>
           </div>
           <button type="button" class="icon-btn" id="share-btn" data-tooltip="分享配置">
             <svg

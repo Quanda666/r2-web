@@ -2,7 +2,7 @@ import { getUser, response } from '../../_utils.js';
 
 export async function onRequestPut(context) {
   const { request, env, params } = context;
-  const user = await getUser(request);
+  const user = await getUser(request, env);
   const id = params.id;
 
   if (!user) return response({ error: 'Unauthorized' }, 401);
@@ -40,7 +40,7 @@ export async function onRequestPut(context) {
 
 export async function onRequestDelete(context) {
   const { request, env, params } = context;
-  const user = await getUser(request);
+  const user = await getUser(request, env);
   const id = params.id;
 
   if (!user) return response({ error: 'Unauthorized' }, 401);

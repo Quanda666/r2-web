@@ -4,217 +4,81 @@
 
 # R2 Web
 
-📁 轻盈优雅的 Web 原生 Cloudflare R2 文件管理器，一切皆在浏览器中完成。
+📁 现代、优雅、全栈化的 Cloudflare R2 管理器。基于 Cloudflare Pages + D1 数据库构建，支持多用户、多存储桶管理。
 
 > 本项目被阮一峰大佬在 _[《科技爱好者周刊（第 387 期）》][ruanyifeng-weekly]_ 中推荐，在此表示感谢！
->
-> 同时也欢迎大家试用并提出宝贵意见，一起把这个工具做得更好用、更顺手！
 
-## 在线使用
+## 核心特性
 
-跟随 [下方指引](#1-配置-r2-桶-cors) 开启 CORS，然后访问 **[r2.viki.moe](https://r2.viki.moe)** 立即开始管理 R2 桶。
+- **多用户系统**: 支持注册/登录，配置云端同步，多设备无缝切换。
+- **多桶管理**: 支持添加多个 R2 存储桶，顶部栏一键切换。
+- **现代 UI**: 极致的 Apple 风格设计，支持响应式与深色模式。
+- **全栈架构**: 利用 Cloudflare Pages Functions 处理 API，D1 数据库存储配置。
+- **零成本部署**: 完全利用 Cloudflare 免费额度，无需支付服务器费用。
+- **原有功能**: 拖拽/粘贴上传、图片压缩、PWA 支持、文件预览、目录管理等全部保留。
 
-## 私有部署
+## 快速部署 (零 CLI 模式)
 
-这里提供几个常见的静态托管平台部署选项，点击按钮即可一键部署：
+无需安装 Node.js 或 Wrangler，直接在浏览器中完成部署。
 
-| 平台             | 快速部署                                                                                   |
-| ---------------- | ------------------------------------------------------------------------------------------ |
-| Vercel           | [![Deploy with Vercel](https://vercel.com/button)][vercel-deploy]                          |
-| Netlify          | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)][netlify-deploy]      |
-| Cloudflare Pages | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)][cloudflare-deploy] |
+### 1. 准备工作
+- 一个 [Cloudflare](https://dash.cloudflare.com/) 账户。
+- Fork 本仓库到你的 GitHub。
 
-> 如果用得不错，别忘了点个免费的小星星 ✨，对这个项目很重要，非常感谢～
+### 2. 创建 Pages 项目
+1. 登录 Cloudflare Dashboard，进入 **Workers 和 Pages**。
+2. 点击 **创建** -> **Pages** -> **连接到 Git**。
+3. 选择你 Fork 的 `r2-web` 仓库。
+4. **构建设置**: 
+   - 框架预设: `None`
+   - 构建命令: (留空)
+   - 输出目录: `src`
+5. 点击 **保存并部署**。
 
-其他服务只需部署 `src` 目录即可，部署后记得更新 CORS 规则允许你的域名访问 R2 API。
+### 3. 创建 D1 数据库
+1. 在 Cloudflare Dashboard 侧边栏进入 **存储和数据库** -> **D1**。
+2. 点击 **创建**，名称填 `r2-web-db`。
+3. 创建成功后，点击进入该数据库，切换到 **控制台** 选项卡。
+4. 复制仓库根目录下的 `schema.sql` 内容，粘贴到控制台并点击 **执行**。
 
-## 反馈途径
+### 4. 绑定 D1 到 Pages
+1. 回到你的 Pages 项目设置 -> **设置** -> **函数**。
+2. 滚动到 **D1 数据库绑定**，点击 **添加绑定**。
+3. 变量名填 `DB`，数据库选择刚才创建的 `r2-web-db`。
+4. **重要**: 在 **环境变量** 中添加 `JWT_SECRET`，填入一段随机字符串作为加密密钥。
+5. 重新部署 Pages 项目使配置生效。
 
-- [GitHub Issues](https://github.com/vikiboss/r2-web/issues) - 提交 bug 报告、功能建议
-- [反馈 QQ 群](https://qm.qq.com/q/e47kAlbdsc) - 即时交流、使用反馈（群号：1091212613）
-
-## 为什么是 R2 Web？
-
-**传统方案痛点：**
-
-- 官方控制台功能基础，登录、管理麻烦，无法高效管理大量文件（复制、移动、重命名等）
-- 第三方客户端要下载安装，跨平台麻烦
-- 命令行工具上手门槛高，不适合临时操作
-- 其他 Web 项目不专注 R2，功能不完善，体验欠佳
-
-**R2 Web 解决的问题：**
-
-- 打开浏览器就能用，跨平台零成本
-- 拖拽、粘贴上传 + 图片压缩，省流量省时间
-- PWA 支持，装到桌面像原生应用
-- 纯前端实现，数据不经过第三方服务器
-
-**R2 Web 无法替代的场景：**
-
-- 超大文件上传（>300MB），建议使用 rclone 等工具
-- 复杂权限管理，建议使用官方控制台或 API
-- 自动化脚本，建议使用官方 SDK 或 CLI
-- API 集成，无后端服务，建议使用官方 SDK 或直接调用 R2 API
-
-## 使用场景
-
-- **文件管理**: 目录浏览、重命名、移动、删除，轻松管理大量文件。
-- **文件浏览**: 内置图片/视频/音频/文本预览，快速查看内容无需下载。
-- **私有图床**: 拖拽/粘贴上传，自动压缩，复制为 Markdown/HTML 格式。
-
-## 设计理念
-
-- 零构建，源码即产物，无需编译打包
-- 零框架，原生 Web 技术优先，不依赖框架
-- 零后端，所有逻辑在浏览器中完成，直连 R2 API
-- 极简美学，黑白灰 + R2 橙色，小圆角、扁平化
-- 性能至上，懒加载、防抖节流、请求缓存
-- 细节优先，流畅动画、及时反馈、键盘导航
-
-## 界面截图
-
-![9392ee.png](https://image.viki.moe/github/9392ee.png)
-
-![ea7dd6.png](https://image.viki.moe/github/ea7dd6.png)
-
-## 功能速览
-
-| 功能类别     | 具体功能                                                                                             |
-| ------------ | ---------------------------------------------------------------------------------------------------- |
-| **文件管理** | 目录浏览、分页加载、懒加载缩略图；按名称/日期/大小排序；重命名、移动、复制、删除（支持递归）；多选批量删除、复制、移动     |
-| **文件上传** | 拖拽/粘贴/选择器上传；文件名模板（哈希、日期、UUID 等占位符）；上传前自动压缩图片（WebAssembly） |
-| **文件预览** | 图片预览（常见格式）；视频/音频内嵌播放器；文本文件预览（代码高亮）                              |
-| **链接复制** | URL 直链、Markdown、HTML、预签名 URL                                                                 |
-| **个性化**   | 简体/繁体/英语/日语；深色模式（跟随系统）；配置分享链接/二维码                                   |
-| **PWA**      | 安装到桌面，原生体验                                                                                 |
-
-## 快速开始
-
-### 1. 配置 R2 桶 CORS
-
-在 Cloudflare 控制台配置 CORS 规则（路径：R2 → 存储桶 → 设置 → CORS 策略）：
-
+### 5. 配置 R2 桶 CORS
+在 R2 存储桶设置中添加 CORS 规则：
 ```json
 [
   {
-    "AllowedOrigins": ["https://r2.viki.moe"],
+    "AllowedOrigins": ["https://你的项目域名.pages.dev"],
     "AllowedMethods": ["GET", "POST", "PUT", "DELETE", "HEAD"],
-    "AllowedHeaders": [
-      "authorization", "content-type",
-      "x-amz-content-sha256", "x-amz-date", "x-amz-copy-source", "x-amz-metadata-directive"
-    ],
+    "AllowedHeaders": ["*"],
     "MaxAgeSeconds": 86400
   }
 ]
 ```
 
-> [!TIP]
-> 私有部署？ 把 `AllowedOrigins` 改成你的域名即可。
+## 功能速览
 
-### 2. 填写凭证连接
+| 功能类别     | 具体功能                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| **账户系统** | 用户注册/登录、云端配置存储、多桶配置同步、访客模式（本地存储）                                       |
+| **桶管理**   | 多存储桶列表、顶部栏快速切换、一键设为默认桶、桶配置在线编辑                                          |
+| **文件管理** | 目录浏览、分页、懒加载；重命名、移动、复制、删除（递归）；多选批量操作                                |
+| **文件上传** | 拖拽/粘贴/选择器；文件名模板；WebAssembly 本地图片压缩                                              |
+| **文件预览** | 图片预览；视频/音频播放；代码高亮预览                                                                |
+| **个性化**   | 多语言 (ZH/TW/EN/JA)；深色模式；紧凑度调整                                                          |
 
-访问 [r2.viki.moe](https://r2.viki.moe)，填写 R2 凭证进行连接。凭证只存储在浏览器 localStorage，不会上传。
+## 反馈途径
 
-### 3. 开始使用
-
-开始管理文件、目录，拖拽文件、直接 Ctrl + V 即可上传，右键文件可进行重命名、复制链接等操作。
-
-如果当作图床使用，建议设置文件名模板，生成带哈希的唯一文件名、开启图片压缩，提升性能和安全性。
-
-## 实用技巧
-
-### 文件名模板示例
-
-- `[name]_[hash:6].[ext]` - 原文件名 + 6 位哈希（默认）
-- `images/[date:YYYY/MM/DD]/[uuid].[ext]` - 按日期分目录
-- `backup/[timestamp]-[name].[ext]` - 时间戳前缀备份
-
-### 配置分享链接
-
-生成「配置分享链接」或「配置分享二维码」，快速在多设备同步配置。
-
-> [!CAUTION]
-> 链接包含 R2 访问凭证，请不要直接分享到公共平台。
-
-### 缓存优化
-
-项目内置支持请求缓存，对目录内容等常见频繁请求返回数据进行了缓存。
-
-对于 CDN 缓存，建议在 Cloudflare 控制台配置缓存规则提升加载速度。
-
-![fca0bf44.png](https://image.viki.moe/github/fca0bf44.png)
-
-## 技术实现
-
-纯前端应用，无构建步骤，代码写完即可部署。
-
-**核心技术：** HTML5/CSS3/ES6+，CSS Layers、原生 `<dialog>`、原生 Fetch、Import Maps、WebAssembly
-
-**依赖库：**
-
-- `aws4fetch` - AWS4 请求签名，处理 R2 S3 API
-- `dayjs` - 日期格式化
-- `@jsquash/*` - WebAssembly 图片压缩（MozJPEG、OxiPNG、libwebp、libavif）
-- `qrcode` - 二维码生成
-
-**无需：** Node.js、Webpack、Vite、React、Vue 等构建工具和框架，保持项目轻盈和零依赖。
-
-## 本地开发
-
-```bash
-git clone https://github.com/vikiboss/r2-web.git
-cd r2-web
-
-# 安装依赖（仅用于类型提示）
-pnpm install
-
-# 启动本地服务器
-npx serve src
-# 或
-python3 -m http.server 5500 --directory src
-```
-
-详细开发指南见 [CLAUDE.md](./CLAUDE.md)。
-
-## FAQ
-
-**Q: 凭证安全吗？**
-
-A: 凭证只存储在浏览器 localStorage，不会上传到任何服务器。建议使用指定 bucket、非管理员读写权限的 API 令牌。
-
-**Q: 支持哪些浏览器？**
-
-A: 现代浏览器（Chrome/Edge/Firefox/Safari 最新版），不考虑 IE 兼容。
-
-**Q: 图片压缩在哪里进行？**
-
-A: 本地压缩使用 WebAssembly，完全在浏览器中完成，文件不会上传到第三方服务器。如果使用云压缩（Tinify 服务），则会将图片上传到 Tinify 服务器进行压缩。
-
-**Q: 可以私有部署吗？**
-
-A: 可以，fork 仓库后修改 CORS 配置中的 `AllowedOrigins`，部署到任意静态托管服务（Cloudflare Pages、Vercel、Netlify 等）。
-
-**Q: 配置分享链接包含什么信息？**
-
-A: 包含访问密钥 ID、秘密访问密钥、存储桶名称等敏感信息，请勿公开分享。
-
-**Q: 为什么上传失败？**
-
-A: 检查 CORS 配置是否正确、凭证是否有效、文件是否超过 300MB（大文件建议用 rclone）。
-
-## 后续计划
-
-- 持续优化 UI/UX，增加更多快捷操作
-
-## 开发故事
-
-项目使用 Claude 4.6 Opus 模型 Vibe Coding 完成，需求到实现纯手工提示词驱动。初始架构和开发设计的提示词可以参考 [plan.md](./plan.md)。
+- [GitHub Issues](https://github.com/vikiboss/r2-web/issues) - 提交 bug 报告、功能建议
+- [反馈 QQ 群](https://qm.qq.com/q/e47kAlbdsc) - 1091212613
 
 ## License
 
 MIT License
 
 [ruanyifeng-weekly]: https://www.ruanyifeng.com/blog/2026/03/weekly-issue-387.html
-[vercel-deploy]: https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web&project-name=r2-web&repository-name=r2-web
-[netlify-deploy]: https://app.netlify.com/start/deploy?repository=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web&integrationName=r2-web&integrationSlug=r2-web
-[cloudflare-deploy]: https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web

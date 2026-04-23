@@ -29,17 +29,36 @@ class ConfigManager {
 
   async refreshBuckets() {
     if (!this.#user) return
-    this.#buckets = await API.getBuckets()
-    // Map backend field names to AppConfig if necessary
-    this.#buckets = this.#buckets.map(b => ({
+    const buckets = await API.getBuckets()
+    // Map backend field names to AppConfig
+    this.#buckets = buckets.map(b => ({
       ...b,
-      bucket: b.bucketName, // compatibility
-      bucketAccess: b.bucketVisibility // compatibility
+      id: b.id,
+      name: b.name,
+      accountId: b.account_id,
+      accessKeyId: b.access_key_id,
+      secretAccessKey: b.secret_access_key,
+      bucket: b.bucket_name,
+      bucketName: b.bucket_name,
+      customDomain: b.custom_domain,
+      bucketAccess: b.bucket_visibility,
+      bucketVisibility: b.bucket_visibility,
+      isDefault: !!b.is_default
     }))
     
     if (this.#buckets.length > 0) {
-      const defaultBucket = this.#buckets.find(b => b.isDefault) || this.#buckets[0]
-      this.#activeConfig = defaultBucket
+      // If we already have an active config that exists in the new buckets list, keep it
+      const currentId = this.#activeConfig?.id
+      const stillExists = currentId ? this.#buckets.find(b => b.id === currentId) : null
+      
+      if (stillExists) {
+        this.#activeConfig = stillExists
+      } else {
+        const defaultBucket = this.#buckets.find(b => b.isDefault) || this.#buckets[0]
+        this.#activeConfig = defaultBucket
+      }
+    } else {
+      this.#activeConfig = null
     }
   }
 
@@ -48,20 +67,35 @@ class ConfigManager {
     if (this.#activeConfig) return this.#activeConfig
 
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') || {}
+      const local = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') || {}
+      if (local && Object.keys(local).length > 0) return local
     } catch {
-      return /** @type {AppConfig} */ ({})
+      // ignore
     }
+    return /** @type {AppConfig} */ ({})
   }
 
   /** @param {AppConfig} cfg */
-  save(cfg) {
-    if (this.#user && cfg.id) {
-      // If we're updating an existing bucket for a user, we'd call API.updateBucket
-      // But usually 'save' is called for the whole R2 settings tab.
-      // For simplicity, if we have an active config, we merge it.
-      this.#activeConfig = { ...this.#activeConfig, ...cfg }
-      // In a more robust impl, we'd sync back to API here.
+  async save(cfg) {
+    if (this.#user) {
+      if (this.#activeConfig?.id) {
+        // Update existing
+        await API.updateBucket(this.#activeConfig.id, {
+          ...cfg,
+          bucketName: cfg.bucket || cfg.bucketName,
+          bucketVisibility: cfg.bucketAccess || cfg.bucketVisibility
+        })
+        await this.refreshBuckets()
+      } else {
+        // Create new
+        await API.createBucket({
+          ...cfg,
+          bucketName: cfg.bucket || cfg.bucketName,
+          bucketVisibility: cfg.bucketAccess || cfg.bucketVisibility,
+          isDefault: this.#buckets.length === 0
+        })
+        await this.refreshBuckets()
+      }
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg))
     }
@@ -73,7 +107,7 @@ class ConfigManager {
   }
 
   switchBucket(id) {
-    const bucket = this.#buckets.find(b => b.id === id)
+    const bucket = this.#buckets.find(b => b.id === Number(id))
     if (bucket) {
       this.#activeConfig = bucket
       return true
