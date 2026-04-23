@@ -2,7 +2,7 @@ import { getUser, response } from '../../_utils.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const user = await getUser(request);
+  const user = await getUser(request, env);
 
   if (!user) return response({ error: 'Unauthorized' }, 401);
 
@@ -15,7 +15,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const user = await getUser(request);
+  const user = await getUser(request, env);
 
   if (!user) return response({ error: 'Unauthorized' }, 401);
 

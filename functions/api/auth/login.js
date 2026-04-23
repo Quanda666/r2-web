@@ -18,7 +18,7 @@ export async function onRequestPost(context) {
     return response({ error: 'Invalid username or password' }, 401);
   }
 
-  const token = await createToken(user);
+  const token = await createToken(user, env.JWT_SECRET || 'r2-web-secret-key-change-me');
   delete user.password_hash;
 
   return new Response(JSON.stringify({ user }), {

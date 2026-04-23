@@ -95,10 +95,15 @@ class App {
       $('#topbar-username').textContent = user.username
       $('#hero-auth-actions').hidden = true
       $('#tab-buckets-btn').hidden = false
+      
+      const buckets = this.#config.buckets
+      const activeBucket = this.#config.get()
+      this.#ui.renderBucketSwitcher(buckets, activeBucket?.id)
     } else {
       $('#topbar-user').hidden = true
       $('#hero-auth-actions').hidden = false
       $('#tab-buckets-btn').hidden = true
+      $('#bucket-switcher-container').hidden = true
     }
   }
 
@@ -116,6 +121,8 @@ class App {
     if (heroLoginText) heroLoginText.textContent = t('login')
     const heroRegisterText = $('#hero-register-text')
     if (heroRegisterText) heroRegisterText.textContent = t('register')
+    const heroDividerText = $('#hero-divider-text')
+    if (heroDividerText) heroDividerText.textContent = t('shareDividerText')
     
     const heroF1 = $('#hero-f1')
     if (heroF1) heroF1.textContent = t('heroF1')
@@ -628,7 +635,7 @@ class App {
         this.#setDensity(newDensity)
       }
 
-      this.#config.save({
+      await this.#config.save({
         ...cfg,
         accountId: accountInput.value.trim(),
         accessKeyId: accessInput.value.trim(),
@@ -655,7 +662,7 @@ class App {
           await API.createBucket(data)
           await this.#config.refreshBuckets()
           this.#refreshBucketsList()
-          this.#ui.toast(t('copyTextSuccess'), 'success')
+          this.#updateAuthUI()
         } catch (err) {
           this.#ui.toast(err.message, 'error')
         }
@@ -671,39 +678,42 @@ class App {
   }
 
   #refreshBucketsList() {
-    const cfg = this.#config.get()
-    const activeId = cfg.id || null
-    this.#ui.renderBuckets(
+    this.#ui.renderBucketsList(
       this.#config.buckets,
-      activeId,
-      async (id) => {
-        if (this.#config.switchBucket(id)) {
-          this.#refreshBucketsList()
-          await this.#connectAndLoad()
-        }
-      },
-      async (bucket) => {
-        const data = await this.#ui.showBucketEditor(bucket)
-        if (data) {
-          try {
-            await API.updateBucket(bucket.id, data)
-            await this.#config.refreshBuckets()
-            this.#refreshBucketsList()
-            this.#ui.toast(t('copyTextSuccess'), 'success')
-          } catch (err) {
-            this.#ui.toast(err.message, 'error')
-          }
-        }
-      },
       async (id) => {
         if (await this.#ui.confirm(t('deleteConfirmTitle'), t('deleteConfirmMsg', { name: '' }))) {
           try {
             await API.deleteBucket(id)
             await this.#config.refreshBuckets()
             this.#refreshBucketsList()
+            this.#updateAuthUI()
           } catch (err) {
             this.#ui.toast(err.message, 'error')
           }
+        }
+      },
+      async (id) => {
+        const bucket = this.#config.buckets.find((b) => b.id === id)
+        const data = await this.#ui.showBucketEditor(bucket)
+        if (data) {
+          try {
+            await API.updateBucket(id, data)
+            await this.#config.refreshBuckets()
+            this.#refreshBucketsList()
+            this.#updateAuthUI()
+          } catch (err) {
+            this.#ui.toast(err.message, 'error')
+          }
+        }
+      },
+      async (id) => {
+        try {
+          await API.updateBucket(id, { isDefault: true })
+          await this.#config.refreshBuckets()
+          this.#refreshBucketsList()
+          this.#updateAuthUI()
+        } catch (err) {
+          this.#ui.toast(err.message, 'error')
         }
       }
     )
@@ -733,6 +743,14 @@ class App {
       }
       const url = this.#config.getShareUrl()
       await this.#ui.showShareDialog(url)
+    })
+
+    $('#bucket-switcher').addEventListener('change', async (e) => {
+      const id = /** @type {HTMLSelectElement} */ (e.target).value
+      if (this.#config.switchBucket(id)) {
+        await this.#connectAndLoad()
+        this.#ui.toast(t('bucketSwitched'), 'success')
+      }
     })
 
     document.addEventListener('click', (e) => {

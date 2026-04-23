@@ -264,6 +264,10 @@ const I18N = {
     guestMode: '访客模式',
     switchToGuest: '切换到访客模式',
     loginRequired: '需要登录',
+    bucketSwitched: '存储桶已切换',
+    noBuckets: '还没有存储桶，添加一个吧',
+    setDefault: '设为默认',
+    default: '默认',
   },
   zh_TW: {
     appTitle: 'R2 Web',
@@ -528,6 +532,10 @@ const I18N = {
     guestMode: '訪客模式',
     switchToGuest: '切換到訪客模式',
     loginRequired: '需要登錄',
+    bucketSwitched: '存儲桶已切換',
+    noBuckets: '還沒有存儲桶，添加一個吧',
+    setDefault: '設為默認',
+    default: '默認',
   },
   en: {
     appTitle: 'R2 Web',
@@ -796,6 +804,10 @@ const I18N = {
     guestMode: 'Guest Mode',
     switchToGuest: 'Switch to Guest',
     loginRequired: 'Login Required',
+    bucketSwitched: 'Bucket switched',
+    noBuckets: 'No buckets found. Add one to get started.',
+    setDefault: 'Set Default',
+    default: 'Default',
   },
   ja: {
     appTitle: 'R2 Web',

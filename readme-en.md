@@ -4,210 +4,77 @@
 
 # R2 Web
 
-📁 A lightweight, elegant, pure-browser Cloudflare R2 file manager. Everything happens right in your browser.
+📁 A modern, elegant, full-stack Cloudflare R2 manager. Built on Cloudflare Pages + D1 Database, supporting multi-user accounts and multi-bucket management.
 
-> This project was recommended by Ruanyifeng in _[Tech Enthusiast Weekly (Issue 387)][ruanyifeng-weekly]_, many thanks for the support!
->
-> Also welcome everyone to try it out and provide valuable feedback to make this tool even better and more user-friendly!
+## Core Features
 
-## Live Demo
+- **Multi-user System**: Supports registration/login, cloud config sync, and seamless switching across devices.
+- **Multi-bucket Management**: Manage multiple R2 buckets with a quick switcher in the topbar.
+- **Modern UI**: Exquisite Apple-style design with responsive layout and dark mode support.
+- **Full-stack Architecture**: Uses Cloudflare Pages Functions for APIs and D1 database for persistent storage.
+- **Zero-cost Deployment**: Fully utilizes Cloudflare's free tier, no server costs required.
+- **Classic Features**: Drag-and-drop/paste upload, image compression, PWA support, file preview, and directory management are all preserved.
 
-Follow the [CORS setup guide](#1-configure-r2-bucket-cors) below, then visit **[r2.viki.moe](https://r2.viki.moe)** to start managing your R2 bucket immediately.
+## Quick Deployment (CLI-free)
 
-## Self-Hosting
+Deploy everything directly in your browser without installing Node.js or Wrangler.
 
-Here are some common static hosting platforms for deployment. Click the buttons for one-click deployment:
+### 1. Preparation
+- A [Cloudflare](https://dash.cloudflare.com/) account.
+- Fork this repository to your GitHub.
 
-| Platform         | Quick Deploy                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------ |
-| Vercel           | [![Deploy with Vercel](https://vercel.com/button)][vercel-deploy]                          |
-| Netlify          | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)][netlify-deploy]      |
-| Cloudflare Pages | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)][cloudflare-deploy] |
+### 2. Create Pages Project
+1. Log in to Cloudflare Dashboard, go to **Workers & Pages**.
+2. Click **Create** -> **Pages** -> **Connect to Git**.
+3. Select your forked `r2-web` repository.
+4. **Build Settings**: 
+   - Framework preset: `None`
+   - Build command: (leave empty)
+   - Output directory: `src`
+5. Click **Save and Deploy**.
 
-Other services can simply deploy the `src` directory. After deployment, remember to update your CORS rules to allow your domain to access the R2 API.
+### 3. Create D1 Database
+1. Go to **Storage & Databases** -> **D1** in the sidebar.
+2. Click **Create**, name it `r2-web-db`.
+3. Once created, go to the database, switch to the **Console** tab.
+4. Copy the content of `schema.sql` from the repository root, paste it into the console, and click **Execute**.
 
-## Feedback
+### 4. Bind D1 to Pages
+1. Go back to your Pages project -> **Settings** -> **Functions**.
+2. Scroll to **D1 Database Bindings**, click **Add binding**.
+3. Variable name: `DB`, Database: select the `r2-web-db` you just created.
+4. **Important**: In **Environment Variables**, add `JWT_SECRET` with a random string as the encryption key.
+5. Re-deploy the Pages project to apply changes.
 
-- [GitHub Issues](https://github.com/vikiboss/r2-web/issues) — bug reports, feature requests
-- [QQ Group](https://qm.qq.com/q/e47kAlbdsc) — real-time discussion (Group ID: 1091212613)
-
-## Why R2 Web?
-
-**Pain points with traditional solutions:**
-
-- The official Cloudflare console is basic and cumbersome to use, especially for managing large numbers of files (copying, moving, renaming, etc.)
-- Third-party desktop clients require installation, painful across platforms
-- CLI tools have a steep learning curve, not suited for quick ad-hoc tasks
-- Other web tools aren't R2-focused, leaving gaps in features and experience
-
-**What R2 Web solves:**
-
-- Open in a browser and start immediately — zero installation, zero platform friction
-- Drag & paste upload with image compression — save bandwidth and time
-- PWA support — install to your home screen and use like a native app
-- Pure client-side — your data never passes through a third-party server
-
-**Where R2 Web falls short:**
-
-- Very large file uploads (>300 MB) — use rclone or similar tools instead
-- Complex permission management — use the official Cloudflare console
-- Automated scripts — use the official SDK or CLI
-- API integration — no backend; use the official SDK or call the R2 API directly
-
-## Use Cases
-
-- **File management**: Browse directories, rename, move, delete — easily handle large collections of files.
-- **File browsing**: Built-in image/video/audio/text preview — quickly inspect content without downloading.
-- **Private image hosting**: Drag & paste upload, auto compression, one-click copy as Markdown/HTML.
-
-## Design Philosophy
-
-- Zero build — source is the artifact, no compilation needed
-- Zero framework — native Web APIs first, no framework dependency
-- Zero backend — all logic runs in the browser, direct R2 API access
-- Minimal aesthetic — black/white/grey + R2 orange, small radius, flat design
-- Performance first — lazy loading, debounce/throttle, request caching
-- Detail-oriented — smooth animations, immediate feedback, keyboard navigation
-
-## Screenshots
-
-![9392ee.png](https://image.viki.moe/github/9392ee.png)
-
-![ea7dd6.png](https://image.viki.moe/github/ea7dd6.png)
-
-## Feature Overview
-
-| Category            | Details                                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **File Management** | Directory browsing, paginated loading, lazy thumbnail loading; Sort by name / date / size; Rename, move, copy, delete (recursive); Batch operations with multi-select |
-| **File Upload**     | Drag / paste / picker upload; Filename templates (hash, date, UUID placeholders); Auto image compression before upload (WebAssembly) |
-| **File Preview**    | Image preview (common formats); Inline video / audio player; Text file preview with syntax highlighting                              |
-| **Link Copy**       | Direct URL, Markdown, HTML, pre-signed URL                                                                                               |
-| **Personalization** | Simplified / Traditional Chinese, English, Japanese; Dark mode (follows system); Config share link / QR code                         |
-| **PWA**             | Install to desktop, native-like experience                                                                                               |
-
-## Quick Start
-
-### 1. Configure R2 Bucket CORS
-
-In the Cloudflare dashboard, go to R2 → Bucket → Settings → CORS Policy and add:
-
+### 5. Configure R2 Bucket CORS
+Add CORS rules in your R2 bucket settings:
 ```json
 [
   {
-    "AllowedOrigins": ["https://r2.viki.moe"],
+    "AllowedOrigins": ["https://your-project.pages.dev"],
     "AllowedMethods": ["GET", "POST", "PUT", "DELETE", "HEAD"],
-    "AllowedHeaders": ["authorization", "content-type", "x-amz-content-sha256", "x-amz-date", "x-amz-copy-source"],
+    "AllowedHeaders": ["*"],
     "MaxAgeSeconds": 86400
   }
 ]
 ```
 
-> [!TIP]
-> Self-hosting? Just replace `AllowedOrigins` with your own domain.
+## Feature Overview
 
-### 2. Enter Credentials
+| Category         | Specific Features                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| **Accounts**     | Registration/Login, Cloud Storage, Multi-bucket Sync, Guest Mode (Local Storage)                       |
+| **Bucket Mgmt**  | Multi-bucket list, Topbar Switcher, Set as Default, Online Bucket Editing                              |
+| **File Mgmt**    | Directory browsing, Pagination, Lazy loading; Rename, Move, Copy, Delete (Recursive); Batch operations |
+| **Upload**       | Drag-and-drop/Paste/File Picker; Filename Templates; WebAssembly Local Image Compression              |
+| **Preview**      | Image preview; Video/Audio player; Code highlighting                                                  |
+| **Personalization** | Multi-language (ZH/TW/EN/JA); Dark mode; Density adjustment                                          |
 
-Visit [r2.viki.moe](https://r2.viki.moe), enter your R2 credentials, and connect. Credentials are stored only in your browser's localStorage and never uploaded anywhere.
+## Feedback
 
-### 3. Start Using
-
-Browse files, drag & drop or press Ctrl+V to upload, right-click any file to rename, copy link, and more.
-
-For image hosting, set a filename template with a hash placeholder, enable image compression for better performance and security.
-
-## Tips & Tricks
-
-### Filename Template Examples
-
-- `[name]_[hash:6].[ext]` — original name + 6-char hash (default)
-- `images/[date:YYYY/MM/DD]/[uuid].[ext]` — date-based directory structure
-- `backup/[timestamp]-[name].[ext]` — timestamp-prefixed backup
-
-### Config Share Link
-
-Generate a "Config Share Link" or "Config QR Code" to quickly sync your settings across devices.
-
-> [!CAUTION]
-> The link contains your R2 access credentials. Do not share it on public platforms.
-
-### Cache Optimization
-
-R2 Web has built-in request caching for common operations like directory listings. For CDN caching, configure cache rules in the Cloudflare dashboard to improve load speeds.
-
-![fca0bf44.png](https://image.viki.moe/github/fca0bf44.png)
-
-## Technical Details
-
-A pure frontend application with no build step — write code and deploy immediately.
-
-**Core technologies:** HTML5/CSS3/ES6+, CSS Layers, native `<dialog>`, native Fetch, Import Maps, WebAssembly
-
-**Dependencies:**
-
-- `aws4fetch` — AWS4 request signing for R2 S3 API
-- `dayjs` — date formatting
-- `@jsquash/*` — WebAssembly image compression (MozJPEG, OxiPNG, libwebp, libavif)
-- `qrcode` — QR code generation
-
-**Not required:** Node.js, Webpack, Vite, React, Vue or any other build tool or framework — keeping the project lightweight and dependency-free.
-
-## Local Development
-
-```bash
-git clone https://github.com/vikiboss/r2-web.git
-cd r2-web
-
-# Install dependencies (for type hints only)
-pnpm install
-
-# Start local dev server
-npx serve src
-# or
-python3 -m http.server 5500 --directory src
-```
-
-See [CLAUDE.md](./CLAUDE.md) for the full development guide.
-
-## FAQ
-
-**Q: Are my credentials safe?**
-
-A: Credentials are stored only in your browser's localStorage and are never sent to any server. It is recommended to use API tokens with permissions limited to the specific bucket and non-admin read/write access.
-
-**Q: Which browsers are supported?**
-
-A: Modern browsers (latest Chrome/Edge/Firefox/Safari). No IE support.
-
-**Q: Where does image compression happen?**
-
-A: Local compression uses WebAssembly and runs entirely in your browser — no files are sent to any third-party server. If you use cloud compression (Tinify), images are sent to Tinify's servers.
-
-**Q: Can I self-host?**
-
-A: Yes — fork the repo, update `AllowedOrigins` in the CORS config to your domain, then deploy to any static hosting service (Cloudflare Pages, Vercel, Netlify, etc.).
-
-**Q: What does the config share link contain?**
-
-A: It includes your Access Key ID, Secret Access Key, bucket name, and other sensitive information. Do not share it publicly.
-
-**Q: Why is my upload failing?**
-
-A: Check that your CORS policy is correct, your credentials are valid, and that the file is under 300 MB (use rclone for large files).
-
-## Roadmap
-
-- Continuous UI/UX improvements and more shortcut actions
-
-## Development Story
-
-This project was built with Claude Opus 4.6 via vibe coding — entirely prompt-driven from requirements to implementation. See [plan.md](./plan.md) for the initial architecture and design prompts.
+- [GitHub Issues](https://github.com/vikiboss/r2-web/issues)
+- [QQ Group](https://qm.qq.com/q/e47kAlbdsc) - 1091212613
 
 ## License
 
 MIT License
-
-[ruanyifeng-weekly]: https://www.ruanyifeng.com/blog/2026/03/weekly-issue-387.html
-[vercel-deploy]: https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web&project-name=r2-web&repository-name=r2-web
-[netlify-deploy]: https://app.netlify.com/start/deploy?repository=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web&integrationName=r2-web&integrationSlug=r2-web
-[cloudflare-deploy]: https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2Fvikiboss%2Fr2-web
