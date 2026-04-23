@@ -1,12 +1,5 @@
 {
   "name": "r2-web",
   "pages_build_output_dir": "./src",
-  "compatibility_date": "2026-02-11",
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "r2-web-db",
-      "database_id": "your-d1-id"
-    }
-  ]
+  "compatibility_date": "2026-02-11"
 }
