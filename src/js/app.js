@@ -7,6 +7,7 @@ import {
   DENSITY_KEY,
   SORT_BY_KEY,
   SORT_ORDER_KEY,
+  STORAGE_KEY
 } from './constants.js'
 import { ConfigManager } from './config-manager.js'
 import { FileExplorer } from './file-explorer.js'
@@ -15,6 +16,7 @@ import { FilePreview } from './file-preview.js'
 import { UploadManager } from './upload-manager.js'
 import { R2Client } from './r2-client.js'
 import { UIManager } from './ui-manager.js'
+import { API } from './api.js'
 import { getCurrentLang, setLang, t } from './i18n.js'
 import { $, getErrorMessage } from './utils.js'
 import dayjs from 'dayjs'
@@ -46,8 +48,15 @@ class App {
     this.#r2 = new R2Client()
     this.#ui = new UIManager()
 
+    this.#boot()
+  }
+
+  async #boot() {
     this.#ui.initTheme()
     this.#ui.initTooltip()
+
+    await this.#config.init()
+    this.#updateAuthUI()
 
     const urlParams = new URLSearchParams(window.location.search)
     const configParam = urlParams.get('config')
@@ -76,6 +85,21 @@ class App {
 
     this.#bindGlobalEvents()
     this.#bindHeroEvents()
+    this.#bindAuthEvents()
+  }
+
+  #updateAuthUI() {
+    const user = this.#config.user
+    if (user) {
+      $('#topbar-user').hidden = false
+      $('#topbar-username').textContent = user.username
+      $('#hero-auth-actions').hidden = true
+      $('#tab-buckets-btn').hidden = false
+    } else {
+      $('#topbar-user').hidden = true
+      $('#hero-auth-actions').hidden = false
+      $('#tab-buckets-btn').hidden = true
+    }
   }
 
   #applyI18nToHTML() {
@@ -88,6 +112,11 @@ class App {
     if (heroDesc) heroDesc.textContent = t('heroDesc')
     const heroConnectText = $('#hero-connect-text')
     if (heroConnectText) heroConnectText.textContent = t('heroConnect')
+    const heroLoginText = $('#hero-login-text')
+    if (heroLoginText) heroLoginText.textContent = t('login')
+    const heroRegisterText = $('#hero-register-text')
+    if (heroRegisterText) heroRegisterText.textContent = t('register')
+    
     const heroF1 = $('#hero-f1')
     if (heroF1) heroF1.textContent = t('heroF1')
     const heroF2 = $('#hero-f2')
@@ -110,6 +139,7 @@ class App {
     $('#tab-upload').textContent = t('configTabUpload')
     $('#tab-compression').textContent = t('configTabCompression')
     $('#tab-about').textContent = t('configTabAbout')
+    $('#tab-buckets').textContent = t('myBuckets')
 
     $('#lbl-theme').textContent = t('lblTheme')
     const themeSelect = $('#cfg-theme')
@@ -281,6 +311,22 @@ class App {
     $('#file-qr-title').textContent = t('fileQrTitle')
     $('#file-qr-desc').textContent = t('fileQrDesc')
     $('#file-qr-copy-text').textContent = t('copyLink')
+    
+    $('#lbl-my-buckets').textContent = t('myBuckets')
+    $('#btn-add-bucket').textContent = t('addBucket')
+    
+    $('#lbl-username').textContent = t('username')
+    $('#lbl-password').textContent = t('password')
+    $('#auth-cancel').textContent = t('cancel')
+    
+    $('#lbl-bucket-alias').textContent = t('editBucket') // Reusing for alias
+    $('#lbl-bucket-account-id').textContent = t('accountId')
+    $('#lbl-bucket-access-key').textContent = t('accessKeyId')
+    $('#lbl-bucket-secret-key').textContent = t('secretAccessKey')
+    $('#lbl-bucket-name').textContent = t('bucketName')
+    $('#lbl-bucket-custom-domain').textContent = t('customDomain')
+    $('#lbl-bucket-visibility').textContent = t('bucketAccess')
+    $('#lbl-bucket-default').textContent = t('confirm') // "Set as default" or similar
 
     this.#updateSelectAllBtn()
     $('#batch-move-text').textContent = t('move')
@@ -315,10 +361,16 @@ class App {
       await this.#explorer.navigate('')
     } catch (/** @type {any} */ err) {
       if (err.message === 'AUTH_FAILED') {
-        this.#config.clear()
-        /** @type {HTMLElement} */
-        $('#app').hidden = true
-        this.#showHero()
+        if (!this.#config.user) {
+          this.#config.clear()
+          /** @type {HTMLElement} */
+          $('#app').hidden = true
+          this.#showHero()
+        } else {
+          this.#ui.toast(t('authFailed'), 'error')
+        }
+      } else {
+        this.#ui.toast(err.message, 'error')
       }
     }
   }
@@ -425,9 +477,32 @@ class App {
   }
 
   #bindHeroEvents() {
-    $('#hero-connect-btn').addEventListener('click', () => {
+    $('#hero-connect-btn').onclick = () => {
       this.#showConfigDialog('r2')
-    })
+    }
+    $('#hero-login-btn').onclick = () => this.#handleAuth('login')
+    $('#hero-register-btn').onclick = () => this.#handleAuth('register')
+  }
+
+  #bindAuthEvents() {
+    // Already handled via handleAuth
+  }
+
+  async #handleAuth(type) {
+    const credentials = await this.#ui.showAuthDialog(type)
+    if (!credentials) return
+
+    try {
+      if (type === 'login') {
+        await API.login(credentials.username, credentials.password)
+      } else {
+        await API.register(credentials.username, credentials.password)
+      }
+      this.#ui.toast(t(type === 'login' ? 'login' : 'register') + ' ' + t('copyTextSuccess'), 'success')
+      window.location.reload()
+    } catch (err) {
+      this.#ui.toast(err.message, 'error')
+    }
   }
 
   /**
@@ -449,13 +524,16 @@ class App {
       tabPanels.forEach((panel) => {
         panel.hidden = panel.dataset.panel !== tabId
       })
+      if (tabId === 'buckets') {
+        this.#refreshBucketsList()
+      }
     }
 
     tabButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.onclick = () => {
         const tabId = btn.dataset.tab
         if (tabId) switchTab(tabId)
-      })
+      }
     })
 
     switchTab(defaultTab)
@@ -490,11 +568,11 @@ class App {
     if (cfg.accountId) accountInput.value = cfg.accountId
     if (cfg.accessKeyId) accessInput.value = cfg.accessKeyId
     if (cfg.secretAccessKey) secretInput.value = cfg.secretAccessKey
-    if (cfg.bucket) bucketInput.value = cfg.bucket
+    if (cfg.bucket || cfg.bucketName) bucketInput.value = cfg.bucket || cfg.bucketName
     if (cfg.filenameTpl) tplInput.value = cfg.filenameTpl
     if (tplScopeInput) tplScopeInput.value = cfg.filenameTplScope || 'images'
     if (cfg.customDomain) domainInput.value = cfg.customDomain
-    if (bucketAccessInput) bucketAccessInput.value = cfg.bucketAccess || 'public'
+    if (bucketAccessInput) bucketAccessInput.value = cfg.bucketAccess || cfg.bucketVisibility || 'public'
 
     if (compressModeInput) compressModeInput.value = cfg.compressMode || 'none'
     if (compressLevelInput) compressLevelInput.value = cfg.compressLevel || 'balanced'
@@ -520,12 +598,12 @@ class App {
     const onBackdropClick = (/** @type {Event} */ e) => {
       if (e.target === dialog) dialog.close()
     }
-    dialog.addEventListener('click', onBackdropClick)
+    dialog.onclick = onBackdropClick
 
     dialog.addEventListener(
       'close',
       () => {
-        dialog.removeEventListener('click', onBackdropClick)
+        dialog.onclick = null
         if (!this.#config.isValid()) {
           this.#showHero()
         }
@@ -551,6 +629,7 @@ class App {
       }
 
       this.#config.save({
+        ...cfg,
         accountId: accountInput.value.trim(),
         accessKeyId: accessInput.value.trim(),
         secretAccessKey: secretInput.value.trim(),
@@ -569,6 +648,20 @@ class App {
       await this.#connectAndLoad()
     }
 
+    $('#add-bucket-btn').onclick = async () => {
+      const data = await this.#ui.showBucketEditor()
+      if (data) {
+        try {
+          await API.createBucket(data)
+          await this.#config.refreshBuckets()
+          this.#refreshBucketsList()
+          this.#ui.toast(t('copyTextSuccess'), 'success')
+        } catch (err) {
+          this.#ui.toast(err.message, 'error')
+        }
+      }
+    }
+
     dialog.querySelectorAll('form.config-tab-panel').forEach((form) => {
       const formElement = /** @type {HTMLFormElement} */ (form)
       formElement.onsubmit = (/** @type {Event} */ e) => e.preventDefault()
@@ -577,15 +670,60 @@ class App {
     dialog.showModal()
   }
 
+  #refreshBucketsList() {
+    const cfg = this.#config.get()
+    const activeId = cfg.id || null
+    this.#ui.renderBuckets(
+      this.#config.buckets,
+      activeId,
+      async (id) => {
+        if (this.#config.switchBucket(id)) {
+          this.#refreshBucketsList()
+          await this.#connectAndLoad()
+        }
+      },
+      async (bucket) => {
+        const data = await this.#ui.showBucketEditor(bucket)
+        if (data) {
+          try {
+            await API.updateBucket(bucket.id, data)
+            await this.#config.refreshBuckets()
+            this.#refreshBucketsList()
+            this.#ui.toast(t('copyTextSuccess'), 'success')
+          } catch (err) {
+            this.#ui.toast(err.message, 'error')
+          }
+        }
+      },
+      async (id) => {
+        if (await this.#ui.confirm(t('deleteConfirmTitle'), t('deleteConfirmMsg', { name: '' }))) {
+          try {
+            await API.deleteBucket(id)
+            await this.#config.refreshBuckets()
+            this.#refreshBucketsList()
+          } catch (err) {
+            this.#ui.toast(err.message, 'error')
+          }
+        }
+      }
+    )
+  }
+
   #bindGlobalEvents() {
     $('#settings-btn').addEventListener('click', () => this.#showConfigDialog())
 
     $('#logout-btn').addEventListener('click', async () => {
       const ok = await this.#ui.confirm(t('logoutConfirmTitle'), t('logoutConfirmMsg'))
       if (!ok) return
-      this.#config.clear()
-      $('#app').hidden = true
-      this.#showHero()
+      
+      if (this.#config.user) {
+        await API.logout()
+        window.location.reload()
+      } else {
+        this.#config.clear()
+        $('#app').hidden = true
+        this.#showHero()
+      }
     })
 
     $('#share-btn').addEventListener('click', async () => {

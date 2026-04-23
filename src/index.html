@@ -89,6 +89,9 @@
             <button type="button" class="config-tab-btn" role="tab" data-tab="compression">
               <span id="tab-compression">压缩设置</span>
             </button>
+            <button type="button" class="config-tab-btn" role="tab" data-tab="buckets" id="tab-buckets-btn" hidden>
+              <span id="tab-buckets">我的存储桶</span>
+            </button>
             <button type="button" class="config-tab-btn" role="tab" data-tab="about">
               <span id="tab-about">关于</span>
             </button>
@@ -314,6 +317,21 @@
                 </div>
               </div>
             </form>
+            
+            <!-- Tab: Buckets -->
+            <div class="config-tab-panel" role="tabpanel" data-panel="buckets" hidden>
+              <div class="config-section">
+                <div class="flex items-center justify-between" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                  <h3 id="lbl-my-buckets" style="margin: 0;">我的存储桶</h3>
+                  <button type="button" class="btn primary sm" id="add-bucket-btn">
+                    <span id="btn-add-bucket">添加存储桶</span>
+                  </button>
+                </div>
+                <div id="buckets-list" class="buckets-list" style="display: flex; flex-direction: column; gap: 8px;">
+                  <!-- Buckets will be listed here -->
+                </div>
+              </div>
+            </div>
 
             <!-- Tab 5: About -->
             <div class="config-tab-panel" role="tabpanel" data-panel="about" hidden>
@@ -399,6 +417,14 @@
         <h1 class="hero-title" id="hero-title">R2 Manager</h1>
         <p class="hero-desc" id="hero-desc">纯客户端的 Cloudflare R2 存储桶文件管理器。</p>
         <div class="hero-actions">
+          <div id="hero-auth-actions" class="flex" style="gap: 8px; margin-bottom: 8px; width: 100%; justify-content: center;">
+            <button type="button" class="btn secondary" id="hero-login-btn">
+              <span id="hero-login-text">登录</span>
+            </button>
+            <button type="button" class="btn secondary" id="hero-register-btn">
+              <span id="hero-register-text">注册</span>
+            </button>
+          </div>
           <button type="button" class="btn primary" id="hero-connect-btn">
             <svg
               class="icon"
@@ -570,6 +596,9 @@
           <h1 class="topbar-title">R2 Web</h1>
         </div>
         <div class="flex items-center" style="gap: 4px">
+          <div id="topbar-user" class="flex items-center" style="gap: 8px; margin-right: 8px;" hidden>
+            <span id="topbar-username" class="text-secondary" style="font-size: 14px;"></span>
+          </div>
           <button type="button" class="icon-btn" id="share-btn" data-tooltip="分享配置">
             <svg
               class="icon"
@@ -1528,5 +1557,78 @@
 
     <!-- Hidden File Input -->
     <input type="file" id="file-input" multiple hidden />
+
+    <!-- Auth Dialog -->
+    <dialog id="auth-dialog">
+      <form id="auth-form" method="dialog" class="dialog-panel">
+        <div class="dialog-header">
+          <h2 id="auth-dialog-title">登录</h2>
+        </div>
+        <div class="dialog-body">
+          <div class="field">
+            <label for="auth-username" id="lbl-username">用户名</label>
+            <input id="auth-username" type="text" required autocomplete="username" />
+          </div>
+          <div class="field">
+            <label for="auth-password" id="lbl-password">密码</label>
+            <input id="auth-password" type="password" required autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button type="button" class="btn secondary" id="auth-cancel">取消</button>
+          <button type="submit" class="btn primary" id="auth-submit">登录</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Bucket Editor Dialog -->
+    <dialog id="bucket-editor-dialog">
+      <form id="bucket-editor-form" method="dialog" class="dialog-panel">
+        <div class="dialog-header">
+          <h2 id="bucket-editor-title">添加存储桶</h2>
+        </div>
+        <div class="dialog-body">
+          <div class="field">
+            <label for="bucket-name-alias" id="lbl-bucket-alias">显示名称</label>
+            <input id="bucket-name-alias" name="name" type="text" required placeholder="例如：我的主桶" />
+          </div>
+          <div class="field">
+            <label for="bucket-account-id" id="lbl-bucket-account-id">账户 ID</label>
+            <input id="bucket-account-id" name="accountId" type="text" required />
+          </div>
+          <div class="field">
+            <label for="bucket-access-key" id="lbl-bucket-access-key">访问密钥 ID</label>
+            <input id="bucket-access-key" name="accessKeyId" type="text" required />
+          </div>
+          <div class="field">
+            <label for="bucket-secret-key" id="lbl-bucket-secret-key">秘密访问密钥</label>
+            <input id="bucket-secret-key" name="secretAccessKey" type="password" required />
+          </div>
+          <div class="field">
+            <label for="bucket-name" id="lbl-bucket-name">存储桶名称</label>
+            <input id="bucket-name" name="bucketName" type="text" required />
+          </div>
+          <div class="field">
+            <label for="bucket-custom-domain" id="lbl-bucket-custom-domain">自定义域名</label>
+            <input id="bucket-custom-domain" name="customDomain" type="text" placeholder="https://cdn.example.com" />
+          </div>
+          <div class="field">
+            <label for="bucket-visibility" id="lbl-bucket-visibility">可见性</label>
+            <select id="bucket-visibility" name="bucketVisibility">
+              <option value="private">私有</option>
+              <option value="public">公开</option>
+            </select>
+          </div>
+          <div class="field flex items-center">
+            <input type="checkbox" id="bucket-is-default" name="isDefault" style="margin-right: 8px; width: auto;" />
+            <label for="bucket-is-default" id="lbl-bucket-default">设为默认</label>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button type="button" class="btn secondary" id="bucket-editor-cancel">取消</button>
+          <button type="submit" class="btn primary" id="bucket-editor-submit">保存</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>
