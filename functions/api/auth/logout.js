@@ -1,4 +1,4 @@
-import { response } from '../_utils.js';
+import { response } from '../../_utils.js';
 
 export async function onRequestPost() {
   return new Response(JSON.stringify({ success: true }), {
