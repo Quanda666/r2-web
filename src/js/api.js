@@ -8,7 +8,12 @@ export const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Server error (Invalid JSON response)');
+    }
     if (!res.ok) throw new Error(data.error || 'Registration failed');
     return data;
   },
@@ -19,24 +24,42 @@ export const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Server error (Invalid JSON response)');
+    }
     if (!res.ok) throw new Error(data.error || 'Login failed');
     return data;
   },
 
   async logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore logout errors
+    }
   },
 
   async me() {
-    const res = await fetch('/api/auth/me');
-    return res.json();
+    try {
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) return { authenticated: false };
+      return await res.json();
+    } catch {
+      return { authenticated: false };
+    }
   },
 
   async getBuckets() {
     const res = await fetch('/api/buckets');
     if (!res.ok) throw new Error('Failed to fetch buckets');
-    return res.json();
+    try {
+      return await res.json();
+    } catch {
+      throw new Error('Failed to parse buckets response');
+    }
   },
 
   async createBucket(bucketData) {
@@ -45,7 +68,12 @@ export const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bucketData)
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Failed to parse create bucket response');
+    }
     if (!res.ok) throw new Error(data.error || 'Failed to create bucket');
     return data;
   },
@@ -56,7 +84,12 @@ export const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bucketData)
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Failed to parse update bucket response');
+    }
     if (!res.ok) throw new Error(data.error || 'Failed to update bucket');
     return data;
   },
@@ -65,7 +98,12 @@ export const API = {
     const res = await fetch(`/api/buckets/${id}`, {
       method: 'DELETE'
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Failed to parse delete bucket response');
+    }
     if (!res.ok) throw new Error(data.error || 'Failed to delete bucket');
     return data;
   }
