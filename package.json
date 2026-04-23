@@ -10,7 +10,9 @@
     "dev": "npx serve ./src -p 5500",
     "format": "prettier --write ./src/**/*.{ts,tsx,js,jsx,json,css,md,html} --no-error-on-unmatched-pattern",
     "typecheck": "tsc --noEmit --project jsconfig.json",
-    "release": "bumpp"
+    "release": "bumpp",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "prettier": {
     "semi": false,
@@ -62,6 +64,7 @@
     "changelogithub": "^14.0.0",
     "prettier": "^3.8.1",
     "serve": "^14.2.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.84.1"
   }
 }
