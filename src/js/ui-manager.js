@@ -148,20 +148,32 @@ class UIManager {
     $('#file-grid').hidden = true
   }
 
+  hideEmptyState() {
+    $('#empty-state').hidden = true
+    $('#file-grid').hidden = false
+  }
+
   /** @param {import('./config-manager.js').AppConfig[]} buckets @param {number | undefined} activeId */
   renderBucketSwitcher(buckets, activeId) {
     const container = $('#bucket-switcher-container')
     const switcher = /** @type {HTMLSelectElement} */ ($('#bucket-switcher'))
-    
-    if (!buckets || buckets.length <= 1) {
+
+    if (!buckets || buckets.length <= 0) {
       container.hidden = true
       return
     }
 
     container.hidden = false
-    switcher.innerHTML = buckets
-      .map(b => `<option value="${b.id}" ${b.id === activeId ? 'selected' : ''}>${b.name}</option>`)
+    let html = buckets
+      .map((b) => `<option value="${b.id}" ${b.id === activeId ? 'selected' : ''}>${b.name}</option>`)
       .join('')
+
+    if (buckets.length > 0) {
+      html += `<option disabled>──────────</option>`
+      html += `<option value="manage">${t('manageBuckets')}</option>`
+    }
+
+    switcher.innerHTML = html
   }
 
   /** @param {import('./config-manager.js').AppConfig[]} buckets @param {(id: number) => void} onDelete @param {(id: number) => void} onEdit @param {(id: number) => void} onSetDefault */
@@ -172,8 +184,10 @@ class UIManager {
       return
     }
 
-    list.innerHTML = buckets.map(b => `
-      <div class="bucket-item card ${b.isDefault ? 'default' : ''}" data-id="${b.id}">
+    list.innerHTML = buckets
+      .map(
+        (b) => `
+      <div class="bucket-item ${b.isDefault ? 'default' : ''}" data-id="${b.id}">
         <div class="bucket-info">
           <div class="bucket-name-row">
             <span class="bucket-name">${b.name}</span>
@@ -182,38 +196,47 @@ class UIManager {
           <div class="bucket-details">${b.bucketName} • ${b.accountId}</div>
         </div>
         <div class="bucket-actions">
-          ${!b.isDefault ? `<button type="button" class="btn sm secondary set-default-btn" title="${t('setDefault')}">${t('setDefault')}</button>` : ''}
-          <button type="button" class="icon-btn sm edit-bucket-btn" title="${t('edit')}">
+          ${
+            !b.isDefault
+              ? `<button type="button" class="btn sm secondary set-default-btn" data-tooltip="${t(
+                  'setDefault',
+                )}">${t('setDefault')}</button>`
+              : ''
+          }
+          <button type="button" class="icon-btn sm edit-bucket-btn" data-tooltip="${t('edit')}">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button type="button" class="icon-btn sm text-danger delete-bucket-btn" title="${t('delete')}">
+          <button type="button" class="icon-btn sm text-danger delete-bucket-btn" data-tooltip="${t('delete')}">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
         </div>
       </div>
-    `).join('')
+    `,
+      )
+      .join('')
 
-    list.querySelectorAll('.set-default-btn').forEach(btn => {
+    list.querySelectorAll('.set-default-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const id = Number(/** @type {HTMLElement} */ (e.target).closest('.bucket-item').dataset.id)
         onSetDefault(id)
       })
     })
 
-    list.querySelectorAll('.edit-bucket-btn').forEach(btn => {
+    list.querySelectorAll('.edit-bucket-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const id = Number(/** @type {HTMLElement} */ (e.target).closest('.bucket-item').dataset.id)
         onEdit(id)
       })
     })
 
-    list.querySelectorAll('.delete-bucket-btn').forEach(btn => {
+    list.querySelectorAll('.delete-bucket-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const id = Number(/** @type {HTMLElement} */ (e.target).closest('.bucket-item').dataset.id)
         onDelete(id)
       })
     })
   }
+
 
   /** @param {number} x @param {number} y @param {string} key @param {boolean} isFolder @param {{size?: number, mod?: number}} [meta] */
   showContextMenu(x, y, key, isFolder, meta = {}) {
@@ -855,70 +878,6 @@ class UIManager {
       $('#bucket-editor-cancel').addEventListener('click', onCancel)
       dialog.addEventListener('close', onClose, { once: true })
       dialog.showModal()
-    })
-  }
-
-  /**
-   * @param {any[]} buckets
-   * @param {number | null} activeId
-   * @param {Function} onSelect
-   * @param {Function} onEdit
-   * @param {Function} onDelete
-   */
-  renderBuckets(buckets, activeId, onSelect, onEdit, onDelete) {
-    const list = $('#buckets-list')
-    list.innerHTML = ''
-    
-    if (buckets.length === 0) {
-      list.innerHTML = `<p class="text-secondary" style="text-align: center; padding: 20px;">${t('emptyFolder')}</p>`
-      return
-    }
-
-    buckets.forEach(bucket => {
-      const el = document.createElement('div')
-      el.className = `bucket-item ${bucket.id === activeId ? 'active' : ''}`
-      el.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 12px;
-        background: var(--bg-secondary);
-        border-radius: var(--radius-md);
-        border: 1px solid ${bucket.id === activeId ? 'var(--accent)' : 'var(--border)'};
-        cursor: pointer;
-      `
-      
-      const info = document.createElement('div')
-      info.className = 'bucket-info'
-      info.style.flex = '1'
-      info.innerHTML = `
-        <div style="font-weight: 500; font-size: 14px;">${bucket.name} ${bucket.isDefault ? '<small class="badge">Default</small>' : ''}</div>
-        <div style="font-size: 12px; color: var(--text-secondary);">${bucket.bucketName}</div>
-      `
-      info.onclick = () => onSelect(bucket.id)
-      
-      const actions = document.createElement('div')
-      actions.className = 'bucket-actions'
-      actions.style.display = 'flex'
-      actions.style.gap = '4px'
-      
-      const editBtn = document.createElement('button')
-      editBtn.type = 'button'
-      editBtn.className = 'icon-btn sm'
-      editBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
-      editBtn.onclick = (e) => { e.stopPropagation(); onEdit(bucket) }
-      
-      const deleteBtn = document.createElement('button')
-      deleteBtn.type = 'button'
-      deleteBtn.className = 'icon-btn sm danger'
-      deleteBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
-      deleteBtn.onclick = (e) => { e.stopPropagation(); onDelete(bucket.id) }
-      
-      actions.appendChild(editBtn)
-      actions.appendChild(deleteBtn)
-      el.appendChild(info)
-      el.appendChild(actions)
-      list.appendChild(el)
     })
   }
 }

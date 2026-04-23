@@ -325,8 +325,8 @@ class App {
     $('#lbl-username').textContent = t('username')
     $('#lbl-password').textContent = t('password')
     $('#auth-cancel').textContent = t('cancel')
-    
-    $('#lbl-bucket-alias').textContent = t('editBucket') // Reusing for alias
+
+    $('#lbl-bucket-alias').textContent = t('bucketAlias')
     $('#lbl-bucket-account-id').textContent = t('accountId')
     $('#lbl-bucket-access-key').textContent = t('accessKeyId')
     $('#lbl-bucket-secret-key').textContent = t('secretAccessKey')
@@ -747,6 +747,16 @@ class App {
 
     $('#bucket-switcher').addEventListener('change', async (e) => {
       const id = /** @type {HTMLSelectElement} */ (e.target).value
+      if (id === 'manage') {
+        // Reset to currently active bucket so it doesn't stay on "Manage..."
+        const activeBucket = this.#config.get()
+        if (activeBucket) {
+          /** @type {HTMLSelectElement} */ ($('#bucket-switcher')).value = String(activeBucket.id)
+        }
+        this.#showConfigDialog('buckets')
+        return
+      }
+
       if (this.#config.switchBucket(id)) {
         await this.#connectAndLoad()
         this.#ui.toast(t('bucketSwitched'), 'success')
