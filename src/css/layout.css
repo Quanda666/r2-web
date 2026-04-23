@@ -36,14 +36,18 @@
       display: flex;
       align-items: center;
       gap: var(--sp-2);
+      height: 32px;
     }
 
     & .topbar-username {
       font-size: var(--text-sm);
       color: var(--text-secondary);
-      font-weight: 500;
-      background: var(--bg-secondary);
-      padding: var(--sp-1) var(--sp-2);
+      font-weight: 600;
+      background: var(--bg-tertiary);
+      padding: 0 var(--sp-2);
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
     }
